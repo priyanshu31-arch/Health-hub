@@ -22,6 +22,18 @@ const HospitalSchema = new mongoose.Schema({
     type: Number,
     default: 4.5,
   },
+  address: {
+    type: String,
+    default: 'Bangalore, India',
+  },
+  latitude: {
+    type: Number,
+    default: 12.9716, // Bangalore default
+  },
+  longitude: {
+    type: Number,
+    default: 77.5946,
+  },
 });
 
 module.exports = mongoose.model('Hospital', HospitalSchema);

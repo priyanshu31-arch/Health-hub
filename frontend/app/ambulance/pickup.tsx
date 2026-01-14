@@ -26,9 +26,12 @@ export default function AmbulancePickupScreen() {
 
     // Booking Modal State
     const [modalVisible, setModalVisible] = useState(false);
+    const [bookingSuccess, setBookingSuccess] = useState(false); // New state for success view
+    const [confirmedBooking, setConfirmedBooking] = useState<any>(null); // Store booking result
     const [selectedAmbulance, setSelectedAmbulance] = useState<any>(null);
     const [patientName, setPatientName] = useState('');
     const [contactNumber, setContactNumber] = useState('');
+    const [pickupAddress, setPickupAddress] = useState('');
 
     useEffect(() => {
         fetchAmbulances();
@@ -49,6 +52,11 @@ export default function AmbulancePickupScreen() {
                 lat: location.coords.latitude,
                 lon: location.coords.longitude
             });
+
+            // Optional: Reverse Geocode to get address string automatically
+            // const [address] = await Location.reverseGeocodeAsync(location.coords);
+            // if (address) setPickupAddress(`${address.street}, ${address.city}`);
+
         } catch (error) {
             console.error('Error getting location:', error);
             // Default fallback
@@ -72,58 +80,81 @@ export default function AmbulancePickupScreen() {
     };
 
     const initiateBooking = (ambulance: any) => {
-        if (!userLocation) {
-            Alert.alert('Error', 'Waiting for location...');
-            return;
-        }
+        // Even if location is not yet fetched, allow opening the modal
+        // We will validate location before final confirmation
         setSelectedAmbulance(ambulance);
+        setBookingSuccess(false); // Reset success state
         setModalVisible(true);
     };
 
     const confirmBooking = async () => {
         if (!patientName || !contactNumber) {
-            Alert.alert('Error', 'Please fill in all details');
+            Alert.alert('Error', 'Please fill in patient name and contact number');
             return;
         }
+
+        // Use current location or a default if still not available, but ideally we should have it by now
+        // or user should have entered a manual location (if we added that field).
+        // For now, let's stick to the coordinates.
+        const bookingLat = userLocation?.lat || 12.9716;
+        const bookingLon = userLocation?.lon || 77.5946;
 
         try {
             setBookingLoading(true);
 
             const bookingData = {
-                pickupLat: userLocation!.lat,
-                pickupLon: userLocation!.lon,
+                pickupLat: bookingLat,
+                pickupLon: bookingLon,
                 hospitalId: selectedAmbulance.hospital._id || selectedAmbulance.hospital,
                 patientName,
-                contactNumber
+                contactNumber,
+                pickupAddress
             };
 
+            console.log('Booking Ambulance:', bookingData);
             const result = await api.bookAmbulance(bookingData);
+            console.log('Booking Result:', result);
 
-            setModalVisible(false);
+            // Instead of closing, show success view
+            setConfirmedBooking(result);
+            setBookingSuccess(true);
+
+            // Clear form
             setPatientName('');
             setContactNumber('');
-
-            Alert.alert('Success', 'Ambulance booked successfully!', [
-                {
-                    text: 'Track Live',
-                    onPress: () => {
-                        router.push({
-                            pathname: '/tracking',
-                            params: {
-                                bookingId: result._id, // Using AmbulanceID as BookingID
-                                vehicleNumber: result.ambulanceNumber,
-                                role: 'user'
-                            }
-                        });
-                    }
-                }
-            ]);
+            setPickupAddress('');
 
         } catch (error: any) {
-            console.error(error);
+            console.error('Booking Error:', error);
             Alert.alert('Error', error.message || 'Failed to book ambulance');
         } finally {
             setBookingLoading(false);
+        }
+    };
+
+    const handleTrackNow = () => {
+        setModalVisible(false);
+        if (confirmedBooking) {
+            // Extract coordinates
+            const pickupLat = confirmedBooking.pickupLocation?.coordinates[1] || userLocation?.lat;
+            const pickupLon = confirmedBooking.pickupLocation?.coordinates[0] || userLocation?.lon;
+            const dropLat = confirmedBooking.hospital?.latitude;
+            const dropLon = confirmedBooking.hospital?.longitude;
+            const dropAddress = confirmedBooking.hospital?.address || confirmedBooking.hospital?.name;
+
+            router.push({
+                pathname: '/tracking',
+                params: {
+                    bookingId: confirmedBooking._id,
+                    vehicleNumber: confirmedBooking.ambulanceNumber,
+                    role: 'user',
+                    pickupLat,
+                    pickupLon,
+                    dropLat,
+                    dropLon,
+                    dropAddress
+                }
+            });
         }
     };
 
@@ -185,52 +216,101 @@ export default function AmbulancePickupScreen() {
             >
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
-                        <ThemedText style={styles.modalTitle}>Patient Details</ThemedText>
-                        <ThemedText style={styles.modalSubtitle}>Please provide details for the ambulance crew.</ThemedText>
+                        {!bookingSuccess ? (
+                            // Booking Form
+                            <>
+                                <ThemedText style={styles.modalTitle}>Book Ambulance</ThemedText>
+                                <ThemedText style={styles.modalSubtitle}>Enter details for quick pickup.</ThemedText>
 
-                        <View style={styles.inputContainer}>
-                            <ThemedText style={styles.label}>Patient Name</ThemedText>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Enter patient name"
-                                value={patientName}
-                                onChangeText={setPatientName}
-                                placeholderTextColor={COLORS.textLight}
-                            />
-                        </View>
+                                {/* Location Info */}
+                                <View style={styles.locationInfo}>
+                                    <MaterialCommunityIcons name="map-marker" size={20} color={COLORS.primary} />
+                                    <ThemedText style={styles.locationText}>
+                                        {userLocation ? 'GPS Location Detected' : 'Using Default Location'}
+                                    </ThemedText>
+                                </View>
 
-                        <View style={styles.inputContainer}>
-                            <ThemedText style={styles.label}>Contact Number</ThemedText>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Enter contact number"
-                                value={contactNumber}
-                                onChangeText={setContactNumber}
-                                keyboardType="phone-pad"
-                                placeholderTextColor={COLORS.textLight}
-                            />
-                        </View>
+                                <View style={styles.inputContainer}>
+                                    <ThemedText style={styles.label}>Pickup Address (Optional)</ThemedText>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Enter Landmark/Address"
+                                        value={pickupAddress}
+                                        onChangeText={setPickupAddress}
+                                        placeholderTextColor={COLORS.textLight}
+                                    />
+                                </View>
 
-                        <View style={styles.modalActions}>
-                            <TouchableOpacity
-                                style={styles.cancelButton}
-                                onPress={() => setModalVisible(false)}
-                                disabled={bookingLoading}
-                            >
-                                <ThemedText style={styles.cancelText}>Cancel</ThemedText>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={styles.confirmButton}
-                                onPress={confirmBooking}
-                                disabled={bookingLoading}
-                            >
-                                {bookingLoading ? (
-                                    <ActivityIndicator color="#fff" />
-                                ) : (
-                                    <ThemedText style={styles.confirmText}>Confirm Booking</ThemedText>
-                                )}
-                            </TouchableOpacity>
-                        </View>
+                                <View style={styles.inputContainer}>
+                                    <ThemedText style={styles.label}>Patient Name</ThemedText>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Who is this for?"
+                                        value={patientName}
+                                        onChangeText={setPatientName}
+                                        placeholderTextColor={COLORS.textLight}
+                                    />
+                                </View>
+
+                                <View style={styles.inputContainer}>
+                                    <ThemedText style={styles.label}>Contact Number</ThemedText>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Driver will call this number"
+                                        value={contactNumber}
+                                        onChangeText={setContactNumber}
+                                        keyboardType="phone-pad"
+                                        placeholderTextColor={COLORS.textLight}
+                                    />
+                                </View>
+
+                                <View style={styles.modalActions}>
+                                    <TouchableOpacity
+                                        style={styles.cancelButton}
+                                        onPress={() => setModalVisible(false)}
+                                        disabled={bookingLoading}
+                                    >
+                                        <ThemedText style={styles.cancelText}>Cancel</ThemedText>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={styles.confirmButton}
+                                        onPress={confirmBooking}
+                                        disabled={bookingLoading}
+                                    >
+                                        {bookingLoading ? (
+                                            <ActivityIndicator color="#fff" />
+                                        ) : (
+                                            <ThemedText style={styles.confirmText}>Confirm & Book</ThemedText>
+                                        )}
+                                    </TouchableOpacity>
+                                </View>
+                            </>
+                        ) : (
+                            // Success View
+                            <View style={styles.successContainer}>
+                                <View style={styles.successIconCircle}>
+                                    <MaterialCommunityIcons name="check" size={40} color="#fff" />
+                                </View>
+                                <ThemedText style={styles.successTitle}>Booking Confirmed!</ThemedText>
+                                <ThemedText style={styles.successMessage}>
+                                    Your ambulance is on its way. Use live tracking to see the driver's location.
+                                </ThemedText>
+
+                                <TouchableOpacity
+                                    style={styles.trackButton}
+                                    onPress={handleTrackNow}
+                                >
+                                    <ThemedText style={styles.trackButtonText}>Track Live</ThemedText>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    onPress={() => setModalVisible(false)}
+                                    style={styles.closeLink}
+                                >
+                                    <ThemedText style={styles.closeLinkText}>Close</ThemedText>
+                                </TouchableOpacity>
+                            </View>
+                        )}
                     </View>
                 </View>
             </Modal>
@@ -340,11 +420,8 @@ const styles = StyleSheet.create({
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'flex-end', // Bottom sheet style
-        // Or 'center' for center modal
-        // Let's do center for now as it's easier to layout
-        alignItems: 'center',
         justifyContent: 'center',
+        alignItems: 'center',
         padding: 24,
     },
     modalContent: {
@@ -383,6 +460,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         borderWidth: 1,
         borderColor: '#E2E8F0',
+        color: COLORS.text,
     },
     modalActions: {
         flexDirection: 'row',
@@ -411,4 +489,68 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#fff',
     },
+    locationInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        backgroundColor: COLORS.primary + '10',
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 8
+    },
+    locationText: {
+        fontSize: 14,
+        color: COLORS.primary,
+        fontWeight: '500'
+    },
+
+    // Success State Styles
+    successContainer: {
+        alignItems: 'center',
+        padding: 16,
+        gap: 12
+    },
+    successIconCircle: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: '#22C55E',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 8
+    },
+    successTitle: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: COLORS.text,
+        textAlign: 'center'
+    },
+    successMessage: {
+        fontSize: 16,
+        color: COLORS.textLight,
+        textAlign: 'center',
+        marginBottom: 16,
+        lineHeight: 22
+    },
+    trackButton: {
+        backgroundColor: COLORS.primary,
+        paddingVertical: 14,
+        paddingHorizontal: 32,
+        borderRadius: 16,
+        width: '100%',
+        alignItems: 'center',
+        ...SHADOWS.small
+    },
+    trackButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold'
+    },
+    closeLink: {
+        padding: 12,
+    },
+    closeLinkText: {
+        color: COLORS.textLight,
+        fontWeight: '600'
+    }
 });

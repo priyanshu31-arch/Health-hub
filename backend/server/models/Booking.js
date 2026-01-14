@@ -36,6 +36,15 @@ const BookingSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  pickupAddress: {
+    type: String, // For ambulance bookings
+  },
+  pickupLat: {
+    type: Number,
+  },
+  pickupLon: {
+    type: Number,
+  },
 });
 
 module.exports = mongoose.model('Booking', BookingSchema);

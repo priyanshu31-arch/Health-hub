@@ -181,6 +181,9 @@ interface Hospital {
     photo?: string;
     bio?: string;
     rating?: number;
+    address?: string;
+    latitude?: number;
+    longitude?: number;
 }
 
 interface Ambulance {
@@ -372,6 +375,13 @@ export const api = {
     registerHospital: async (data: Partial<Hospital>): Promise<Hospital> => {
         return fetchApi<Hospital>('/api/hospitals', {
             method: 'POST',
+            body: JSON.stringify(data),
+        });
+    },
+
+    updateHospital: async (id: string, data: Partial<Hospital>): Promise<Hospital> => {
+        return fetchApi<Hospital>(`/api/hospitals/${id}`, {
+            method: 'PUT',
             body: JSON.stringify(data),
         });
     },

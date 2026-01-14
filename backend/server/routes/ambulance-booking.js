@@ -8,11 +8,26 @@ const auth = require('../middleware/auth');
 // @route   POST /ambulance/book
 // @desc    Book the nearest available ambulance
 // @access  Private (for Users)
-router.post('/book', auth, async (req, res) => {
-  const { pickupLat, pickupLon, hospitalId, patientName, contactNumber } = req.body;
+// @route   POST /ambulance/book
+// @desc    Book the nearest available ambulance
+// @access  Public (Guest OK)
+router.post('/book', async (req, res) => {
+  const { pickupLat, pickupLon, hospitalId, patientName, contactNumber, pickupAddress } = req.body;
+  const jwt = require('jsonwebtoken'); // Ensure jwt is imported
 
   if (!pickupLat || !pickupLon || !hospitalId) {
     return res.status(400).json({ msg: 'Missing location or hospital ID.' });
+  }
+
+  let userId = null;
+  const token = req.header('x-auth-token');
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      userId = decoded.user.id;
+    } catch (err) {
+      // Continue as guest
+    }
   }
 
   try {
@@ -22,10 +37,10 @@ router.post('/book', auth, async (req, res) => {
     }
 
     // Find the nearest available ambulance to the user
+    // (Simplification: just find one available for this hospital)
     const nearestAmbulance = await Ambulance.findOne({
       hospital: hospitalId,
       status: 'available',
-      // You can add a geospatial query here if you have many ambulances
     });
 
     if (!nearestAmbulance) {
@@ -33,19 +48,21 @@ router.post('/book', auth, async (req, res) => {
     }
 
     // Assign the booking to the ambulance
-    nearestAmbulance.user = req.user.id;
+    if (userId) {
+      nearestAmbulance.user = userId;
+    }
     nearestAmbulance.status = 'booked';
     nearestAmbulance.pickupLocation = {
       type: 'Point',
       coordinates: [pickupLon, pickupLat],
     };
-    nearestAmbulance.destinationAddress = hospital.name; // Or a full address if available
+    // destinationAddress is usually the hospital
+    nearestAmbulance.destinationAddress = hospital.name;
 
-    // For demonstration, we'll set the ambulance's starting location.
-    // In a real app, this would be the ambulance's actual current GPS location.
+    // For demonstration, we'll set the ambulance's starting location nearby
     nearestAmbulance.currentLocation = {
       type: 'Point',
-      coordinates: [pickupLon + 0.05, pickupLat + 0.05], // Simulating a nearby start
+      coordinates: [pickupLon + 0.005, pickupLat + 0.005], // Simulating a nearby start
     };
 
     await nearestAmbulance.save();
@@ -56,12 +73,16 @@ router.post('/book', auth, async (req, res) => {
       bookingTypeModel: 'Ambulance',
       itemId: nearestAmbulance._id,
       hospital: hospital._id,
-      user: req.user.id,
-      patientName: patientName || req.user.name || 'N/A', // Fallback to user name
+      user: userId, // Can be null
+      patientName: patientName || 'Guest',
       contactNumber: contactNumber || 'N/A',
+      pickupAddress,
+      pickupLat,
+      pickupLon
     });
     await booking.save();
 
+    await nearestAmbulance.populate('hospital');
     res.json(nearestAmbulance);
   } catch (err) {
     console.error(err.message);
@@ -94,7 +115,12 @@ router.get('/status/:ambulanceId', auth, async (req, res) => {
 // @route   PUT /ambulance/location/:ambulanceId
 // @desc    Update an ambulance's current location (for the driver's app)
 // @access  Private (for Admins/Drivers)
-router.put('/location/:ambulanceId', auth, async (req, res) => {
+const { getIo } = require('../socket');
+
+// @route   PUT /ambulance/location/:ambulanceId
+// @desc    Update an ambulance's current location (for the driver's app)
+// @access  Private (for Admins/Drivers)
+router.put('/location/:ambulanceId', async (req, res) => {
   const { lat, lon } = req.body;
 
   if (!lat || !lon) {
@@ -121,6 +147,20 @@ router.put('/location/:ambulanceId', auth, async (req, res) => {
     }
 
     await ambulance.save();
+
+    // Emit socket event for real-time tracking
+    try {
+      const io = getIo();
+      // Emit to the room matching the ambulance ID
+      io.to(req.params.ambulanceId).emit('receive_location', {
+        latitude: lat,
+        longitude: lon
+      });
+      console.log(`Emitted location update for ambulance ${req.params.ambulanceId}`);
+    } catch (socketError) {
+      console.error('Socket Emission Error:', socketError.message);
+    }
+
     res.json(ambulance);
   } catch (err) {
     console.error(err.message);

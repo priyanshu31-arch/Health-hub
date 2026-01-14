@@ -67,8 +67,11 @@ router.get('/:id', async (req, res) => {
 // @route   POST /hospitals
 // @desc    Add a new hospital
 // @access  Private
+// @route   POST /hospitals
+// @desc    Add a new hospital
+// @access  Private
 router.post('/', auth, async (req, res) => {
-  const { name, photo, bio, rating } = req.body;
+  const { name, photo, bio, rating, address, latitude, longitude } = req.body;
 
   try {
     let hospital = await Hospital.findOne({ user: req.user.id });
@@ -83,6 +86,9 @@ router.post('/', auth, async (req, res) => {
       photo,
       bio,
       rating,
+      address,
+      latitude,
+      longitude
     });
 
     await hospital.save();
@@ -98,7 +104,7 @@ router.post('/', auth, async (req, res) => {
 // @desc    Update a hospital
 // @access  Private
 router.put('/:id', auth, async (req, res) => {
-  const { name, photo, bio, rating } = req.body;
+  const { name, photo, bio, rating, address, latitude, longitude } = req.body;
 
   try {
     let hospital = await Hospital.findById(req.params.id);
@@ -115,6 +121,9 @@ router.put('/:id', auth, async (req, res) => {
     hospital.photo = photo || hospital.photo;
     hospital.bio = bio || hospital.bio;
     hospital.rating = rating || hospital.rating;
+    hospital.address = address || hospital.address;
+    if (latitude) hospital.latitude = latitude;
+    if (longitude) hospital.longitude = longitude;
 
     await hospital.save();
 

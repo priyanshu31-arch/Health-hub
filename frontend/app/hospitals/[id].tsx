@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity, View, TextInput, Modal, Alert } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity, View, TextInput, Modal, Alert, Platform, Button } from 'react-native';
 import { Image } from 'expo-image';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -44,6 +44,8 @@ export default function HospitalDetailsScreen() {
     const [bookingType, setBookingType] = useState<'bed' | 'ambulance' | null>(null);
     const [selectedItem, setSelectedItem] = useState<Bed | Ambulance | null>(null);
     const [modalVisible, setModalVisible] = useState(false);
+    const [bookingSuccess, setBookingSuccess] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [patientName, setPatientName] = useState('');
     const [contactNumber, setContactNumber] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -54,77 +56,64 @@ export default function HospitalDetailsScreen() {
         }
     }, [id]);
 
-    const fetchDetails = async () => {
+    const fetchDetails = async (showLoading = true) => {
         try {
-            setLoading(true);
+            if (showLoading) setLoading(true);
             const data = await api.getHospitalDetails(id as string);
             setDetails(data);
         } catch (error) {
             console.error('Failed to fetch hospital details:', error);
-            Alert.alert('Error', 'Failed to load hospital details.');
+            // Non-blocking, just log
         } finally {
-            setLoading(false);
+            if (showLoading) setLoading(false);
         }
     };
 
     const handleBookPress = (item: Bed | Ambulance, type: 'bed' | 'ambulance') => {
         setSelectedItem(item);
         setBookingType(type);
+        setBookingSuccess(false);
+        setErrorMessage(null); // Reset error
         setModalVisible(true);
         Haptics.selectionAsync();
     };
 
     const submitBooking = async () => {
+        setErrorMessage(null);
         if (!patientName || !contactNumber) {
-            Alert.alert('Required', 'Please enter both name and contact number.');
+            setErrorMessage('Please enter both name and contact number.');
             return;
         }
 
         try {
             setSubmitting(true);
-            if (bookingType === 'bed') {
-                await api.bookBed({
-                    hospitalName: details?.hospital.name || '',
-                    bedType: 'Standard', // Defaulting for now
-                    date: new Date().toISOString().split('T')[0],
-                    time: new Date().toLocaleTimeString(),
-                    price: 500, // Placeholder price
-                    // @ts-ignore - added fields support in backend
-                    itemId: selectedItem?._id,
-                    hospital: details?.hospital._id,
-                    bookingType: 'bed',
-                    patientName,
-                    contactNumber
-                } as any);
-            } else {
-                // For ambulance, we might need location, but using basic booking for now as per "book by giving name and number" request
-                // The existing api.bookAmbulance expects location, so we might need a direct call to /bookings for generic booking
-                // OR we update the backend behavior. 
-                // Given the user request "book by giving name and giving number", I will use the /bookings endpoint generic logic for now
-                // which I updated to support patientName.
-                await api.bookBed({ // Reusing bookBed as it points to /bookings generic
-                    hospitalName: details?.hospital.name || '',
-                    bedType: 'Ambulance',
-                    date: new Date().toISOString().split('T')[0],
-                    time: new Date().toLocaleTimeString(),
-                    price: 200,
-                    // @ts-ignore
-                    itemId: selectedItem?._id,
-                    hospital: details?.hospital._id,
-                    bookingType: 'ambulance',
-                    patientName,
-                    contactNumber
-                } as any);
-            }
+            const bookingData = {
+                hospitalName: details?.hospital.name || '',
+                date: new Date().toISOString().split('T')[0],
+                time: new Date().toLocaleTimeString(),
+                price: bookingType === 'bed' ? 500 : 200,
+                // @ts-ignore
+                itemId: selectedItem?._id,
+                hospital: details?.hospital._id,
+                bookingType: bookingType || 'bed',
+                patientName,
+                contactNumber,
+                bedType: bookingType === 'bed' ? 'Standard' : 'Ambulance'
+            };
 
-            Alert.alert('Success', 'Booking confirmed!');
-            setModalVisible(false);
+            await api.bookBed(bookingData as any);
+
+            // Show success view
+            setBookingSuccess(true);
             setPatientName('');
             setContactNumber('');
-            fetchDetails(); // Refresh availability
-        } catch (error) {
+
+            // Background refresh moved to Done button to keep success view visible
+            // fetchDetails(false);
+
+        } catch (error: any) {
             console.error(error);
-            Alert.alert('Error', 'Booking failed. Please try again.');
+            setErrorMessage(error.message || 'Booking failed. Please try again.');
         } finally {
             setSubmitting(false);
         }
@@ -269,35 +258,72 @@ export default function HospitalDetailsScreen() {
             >
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
-                        <ThemedText style={styles.modalTitle}>Confirm Booking</ThemedText>
-                        <ThemedText style={styles.modalSubtitle}>
-                            Booking {bookingType === 'bed' ? 'Bed' : 'Ambulance'} {bookingType === 'bed' ? (selectedItem as Bed)?.bedNumber : (selectedItem as Ambulance)?.ambulanceNumber}
-                        </ThemedText>
+                        {!bookingSuccess ? (
+                            <>
+                                <ThemedText style={styles.modalTitle}>Confirm Booking</ThemedText>
+                                <ThemedText style={styles.modalSubtitle}>
+                                    Booking {bookingType === 'bed' ? 'Bed' : 'Ambulance'} {bookingType === 'bed' ? (selectedItem as Bed)?.bedNumber : (selectedItem as Ambulance)?.ambulanceNumber}
+                                </ThemedText>
 
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Patient Name"
-                            placeholderTextColor={COLORS.textLight}
-                            value={patientName}
-                            onChangeText={setPatientName}
-                        />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Contact Number"
-                            placeholderTextColor={COLORS.textLight}
-                            value={contactNumber}
-                            onChangeText={setContactNumber}
-                            keyboardType="phone-pad"
-                        />
+                                {errorMessage && (
+                                    <View style={styles.errorContainer}>
+                                        <MaterialCommunityIcons name="alert-circle" size={16} color="#DC2626" />
+                                        <ThemedText style={styles.errorText}>{errorMessage}</ThemedText>
+                                    </View>
+                                )}
 
-                        <View style={styles.modalButtons}>
-                            <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
-                                <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.confirmButton} onPress={submitBooking} disabled={submitting}>
-                                {submitting ? <ActivityIndicator color="#fff" /> : <ThemedText style={styles.confirmButtonText}>Confirm</ThemedText>}
-                            </TouchableOpacity>
-                        </View>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Patient Name"
+                                    placeholderTextColor={COLORS.textLight}
+                                    value={patientName}
+                                    onChangeText={setPatientName}
+                                />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Contact Number"
+                                    placeholderTextColor={COLORS.textLight}
+                                    value={contactNumber}
+                                    onChangeText={setContactNumber}
+                                    keyboardType="phone-pad"
+                                />
+
+                                <View style={styles.modalButtons}>
+                                    <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
+                                        <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
+                                    </TouchableOpacity>
+                                    <View style={{ flex: 1 }}>
+                                        <Button
+                                            title={submitting ? "..." : "Confirm"}
+                                            onPress={submitBooking}
+                                            disabled={submitting}
+                                            color={COLORS.primary}
+                                        />
+                                    </View>
+                                </View>
+                            </>
+                        ) : (
+                            // Success View
+                            <View style={styles.successContainer}>
+                                <View style={styles.successIconCircle}>
+                                    <MaterialCommunityIcons name="check" size={40} color="#fff" />
+                                </View>
+                                <ThemedText style={styles.successTitle}>Booking Confirmed!</ThemedText>
+                                <ThemedText style={styles.successMessage}>
+                                    Your {bookingType} has been successfully booked.
+                                </ThemedText>
+
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        setModalVisible(false);
+                                        fetchDetails(false);
+                                    }}
+                                    style={styles.confirmButton}
+                                >
+                                    <ThemedText style={styles.confirmButtonText}>Done</ThemedText>
+                                </TouchableOpacity>
+                            </View>
+                        )}
                     </View>
                 </View>
             </Modal>
@@ -591,4 +617,48 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontWeight: '600',
     },
+    // Success State Styles
+    successContainer: {
+        alignItems: 'center',
+        padding: 16,
+        gap: 12,
+        width: '100%'
+    },
+    successIconCircle: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: '#22C55E',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 8
+    },
+    successTitle: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: COLORS.text,
+        textAlign: 'center'
+    },
+    successMessage: {
+        fontSize: 16,
+        color: COLORS.textLight,
+        textAlign: 'center',
+        marginBottom: 16,
+        lineHeight: 22
+    },
+    errorContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FEF2F2',
+        padding: 10,
+        borderRadius: 8,
+        marginBottom: 16,
+        gap: 8,
+        width: '100%'
+    },
+    errorText: {
+        color: '#DC2626',
+        fontSize: 14,
+        flex: 1
+    }
 });

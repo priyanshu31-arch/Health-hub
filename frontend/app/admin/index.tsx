@@ -114,6 +114,14 @@ export default function AdminDashboard() {
             color: '#059669', // Emerald
             bg: '#ECFDF5', // Light Emerald
             route: '/admin/manage-bookings'
+        },
+        {
+            title: 'Manage Profile',
+            desc: 'Update hospital address and location.',
+            icon: 'hospital-building',
+            color: '#7C3AED', // Violet
+            bg: '#F5F3FF', // Light Violet
+            route: '/admin/profile'
         }
     ];
 

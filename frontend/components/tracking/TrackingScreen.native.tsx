@@ -12,20 +12,31 @@ import { SOCKET_URL } from '../../config';
 // const SOCKET_URL = 'http://localhost:5000';
 
 export default function TrackingScreen() {
-    const { bookingId, role, patientName, vehicleNumber } = useLocalSearchParams();
+    const {
+        bookingId, role, patientName, vehicleNumber,
+        pickupLat, pickupLon, dropLat, dropLon, dropAddress
+    } = useLocalSearchParams();
     const router = useRouter();
     const mapRef = useRef<MapView>(null);
 
-    const [location, setLocation] = useState({
-        latitude: 12.9716, // Default Bangalore
-        longitude: 77.5946,
+    // Initial region (fallback to Bangalore)
+    const [region, setRegion] = useState({
+        latitude: pickupLat ? parseFloat(pickupLat as string) : 12.9716,
+        longitude: pickupLon ? parseFloat(pickupLon as string) : 77.5946,
         latitudeDelta: 0.05,
         longitudeDelta: 0.05,
     });
+
     const [remoteLocation, setRemoteLocation] = useState<any>(null);
-    const [status, setStatus] = useState('Waiting for acknowledgement...');
+    const [status, setStatus] = useState('Waiting for ambulance location...');
     const [socket, setSocket] = useState<any>(null);
     const [isAcknowledged, setIsAcknowledged] = useState(false);
+
+    // Parse params
+    const pLat = pickupLat ? parseFloat(pickupLat as string) : undefined;
+    const pLon = pickupLon ? parseFloat(pickupLon as string) : undefined;
+    const dLat = dropLat ? parseFloat(dropLat as string) : undefined;
+    const dLon = dropLon ? parseFloat(dropLon as string) : undefined;
 
     useEffect(() => {
         // Init Socket
@@ -37,16 +48,30 @@ export default function TrackingScreen() {
             newSocket.emit('join_booking', bookingId);
         });
 
-        newSocket.on('receive_location', (loc) => {
+        newSocket.on('receive_location', (loc: any) => {
             console.log('Received Remote Location:', loc);
-            setRemoteLocation(loc);
+            // Ensure numbers
+            if (loc && loc.latitude && loc.longitude) {
+                const newLoc = {
+                    latitude: parseFloat(loc.latitude),
+                    longitude: parseFloat(loc.longitude),
+                };
+                setRemoteLocation(newLoc);
+
+                // Optional: Auto-center on ambulance
+                // mapRef.current?.animateToRegion({
+                //     ...newLoc,
+                //     latitudeDelta: 0.02,
+                //     longitudeDelta: 0.02,
+                // }, 1000);
+            }
+            setStatus('Active');
         });
 
-        newSocket.on('receive_ack', (data) => {
+        newSocket.on('receive_ack', (data: any) => {
             console.log('Received Ack:', data);
             setStatus(data.message);
             setIsAcknowledged(true);
-            Alert.alert('Update', data.message);
         });
 
         return () => {
@@ -54,15 +79,12 @@ export default function TrackingScreen() {
         };
     }, []);
 
-    // Location Tracking
+    // Location Tracking (Self) - Only emit if Driver/Admin. User just watches.
     useEffect(() => {
         let subscription: any;
         (async () => {
             let { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') {
-                Alert.alert('Permission to access location was denied');
-                return;
-            }
+            if (status !== 'granted') return;
 
             subscription = await Location.watchPositionAsync(
                 {
@@ -72,24 +94,27 @@ export default function TrackingScreen() {
                 },
                 (loc) => {
                     const { latitude, longitude } = loc.coords;
-                    setLocation(prev => ({ ...prev, latitude, longitude }));
 
-                    if (socket) {
-                        socket.emit('send_location', {
-                            bookingId,
-                            location: { latitude, longitude }
-                        });
+                    // Only emit if NOT basic user (i.e. if Role is Driver - not implemented yet, or Admin)
+                    // For now, let's say 'user' doesn't emit to avoid confusion, or does?
+                    // If 'user' emits, 'ambulance' listener sees it.
+                    // Assuming this screen is reused for Driver later.
+                    if (role === 'admin') {
+                        if (socket) {
+                            socket.emit('send_location', {
+                                bookingId,
+                                location: { latitude, longitude }
+                            });
+                        }
                     }
                 }
             );
         })();
 
         return () => {
-            if (subscription) {
-                subscription.remove();
-            }
+            if (subscription) subscription.remove();
         };
-    }, [socket]);
+    }, [socket, role]);
 
     const sendAck = () => {
         if (socket) {
@@ -110,22 +135,39 @@ export default function TrackingScreen() {
                 ref={mapRef}
                 style={styles.map}
                 provider={PROVIDER_DEFAULT}
-                region={location}
+                initialRegion={region}
                 showsUserLocation={true}
             >
-                {/* My Location (Handled by showsUserLocation usually, but custom marker if needed) */}
-
-                {/* Remote Location (Ambulance or User) */}
+                {/* Ambulance Marker (Remote) */}
                 {remoteLocation && (
                     <Marker
                         coordinate={remoteLocation}
-                        title={role === 'admin' ? "Patient" : "Ambulance"}
-                        description={role === 'admin' ? patientName as string : vehicleNumber as string}
+                        title="Ambulance"
+                        description={vehicleNumber as string || "Ambulance"}
                     >
                         <View style={styles.markerContainer}>
-                            <Ionicons name={role === 'admin' ? "person" : "medical"} size={24} color={role === 'admin' ? "blue" : "red"} />
+                            <Ionicons name="medical" size={24} color="red" />
                         </View>
                     </Marker>
+                )}
+
+                {/* Pickup Marker */}
+                {pLat && pLon && (
+                    <Marker
+                        coordinate={{ latitude: pLat, longitude: pLon }}
+                        title="Pickup Location"
+                        pinColor="green"
+                    />
+                )}
+
+                {/* Drop Marker */}
+                {dLat && dLon && (
+                    <Marker
+                        coordinate={{ latitude: dLat, longitude: dLon }}
+                        title="Drop Location"
+                        description={dropAddress as string}
+                        pinColor="blue"
+                    />
                 )}
             </MapView>
 

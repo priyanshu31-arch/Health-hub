@@ -42,11 +42,22 @@ router.get('/my', auth, async (req, res) => {
 
 // @route   POST /bookings
 // @desc    Create a new booking
-// @access  Private
-router.post('/', auth, async (req, res) => {
+// @access  Public (Auth optional)
+router.post('/', async (req, res) => {
   const { bookingType, itemId, hospital, patientName, contactNumber } = req.body;
+  const token = req.header('x-auth-token');
 
   try {
+    let userId = null;
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        userId = decoded.user.id;
+      } catch (err) {
+        console.warn('Invalid token provided for booking, proceeding as guest');
+      }
+    }
+
     const bookingModelMap = {
       bed: 'Bed',
       ambulance: 'Ambulance',
@@ -59,10 +70,8 @@ router.post('/', auth, async (req, res) => {
       hospital,
       patientName,
       contactNumber,
+      user: userId // Optional
     });
-
-    // User is guaranteed by auth middleware
-    newBooking.user = req.user.id;
 
     const booking = await newBooking.save();
 
