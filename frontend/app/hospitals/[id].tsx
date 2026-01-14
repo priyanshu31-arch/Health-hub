@@ -1,0 +1,594 @@
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity, View, TextInput, Modal, Alert } from 'react-native';
+import { Image } from 'expo-image';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { COLORS, SHADOWS } from '../../constants/theme';
+import { ThemedText } from '../../components/themed-text';
+import { api } from '../config/api.config';
+import * as Haptics from 'expo-haptics';
+
+interface Bed {
+    _id: string;
+    bedNumber: string;
+    isAvailable: boolean;
+    hospital: string;
+}
+
+interface Ambulance {
+    _id: string;
+    ambulanceNumber: string;
+    isAvailable: boolean;
+    hospital: string;
+    status?: string;
+}
+
+interface HospitalDetails {
+    hospital: {
+        _id: string;
+        name: string;
+        photo?: string;
+        bio?: string;
+        rating?: number;
+    };
+    beds: Bed[];
+    ambulances: Ambulance[];
+}
+
+export default function HospitalDetailsScreen() {
+    const router = useRouter();
+    const { id } = useLocalSearchParams();
+    const [details, setDetails] = useState<HospitalDetails | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [bookingType, setBookingType] = useState<'bed' | 'ambulance' | null>(null);
+    const [selectedItem, setSelectedItem] = useState<Bed | Ambulance | null>(null);
+    const [modalVisible, setModalVisible] = useState(false);
+    const [patientName, setPatientName] = useState('');
+    const [contactNumber, setContactNumber] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+
+    useEffect(() => {
+        if (id) {
+            fetchDetails();
+        }
+    }, [id]);
+
+    const fetchDetails = async () => {
+        try {
+            setLoading(true);
+            const data = await api.getHospitalDetails(id as string);
+            setDetails(data);
+        } catch (error) {
+            console.error('Failed to fetch hospital details:', error);
+            Alert.alert('Error', 'Failed to load hospital details.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleBookPress = (item: Bed | Ambulance, type: 'bed' | 'ambulance') => {
+        setSelectedItem(item);
+        setBookingType(type);
+        setModalVisible(true);
+        Haptics.selectionAsync();
+    };
+
+    const submitBooking = async () => {
+        if (!patientName || !contactNumber) {
+            Alert.alert('Required', 'Please enter both name and contact number.');
+            return;
+        }
+
+        try {
+            setSubmitting(true);
+            if (bookingType === 'bed') {
+                await api.bookBed({
+                    hospitalName: details?.hospital.name || '',
+                    bedType: 'Standard', // Defaulting for now
+                    date: new Date().toISOString().split('T')[0],
+                    time: new Date().toLocaleTimeString(),
+                    price: 500, // Placeholder price
+                    // @ts-ignore - added fields support in backend
+                    itemId: selectedItem?._id,
+                    hospital: details?.hospital._id,
+                    bookingType: 'bed',
+                    patientName,
+                    contactNumber
+                } as any);
+            } else {
+                // For ambulance, we might need location, but using basic booking for now as per "book by giving name and number" request
+                // The existing api.bookAmbulance expects location, so we might need a direct call to /bookings for generic booking
+                // OR we update the backend behavior. 
+                // Given the user request "book by giving name and giving number", I will use the /bookings endpoint generic logic for now
+                // which I updated to support patientName.
+                await api.bookBed({ // Reusing bookBed as it points to /bookings generic
+                    hospitalName: details?.hospital.name || '',
+                    bedType: 'Ambulance',
+                    date: new Date().toISOString().split('T')[0],
+                    time: new Date().toLocaleTimeString(),
+                    price: 200,
+                    // @ts-ignore
+                    itemId: selectedItem?._id,
+                    hospital: details?.hospital._id,
+                    bookingType: 'ambulance',
+                    patientName,
+                    contactNumber
+                } as any);
+            }
+
+            Alert.alert('Success', 'Booking confirmed!');
+            setModalVisible(false);
+            setPatientName('');
+            setContactNumber('');
+            fetchDetails(); // Refresh availability
+        } catch (error) {
+            console.error(error);
+            Alert.alert('Error', 'Booking failed. Please try again.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={COLORS.primary} />
+            </View>
+        );
+    }
+
+    if (!details) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ThemedText>Hospital not found.</ThemedText>
+            </View>
+        );
+    }
+
+    return (
+        <View style={styles.container}>
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                {/* Header Image */}
+                <View style={styles.imageContainer}>
+                    <Image
+                        source={details.hospital.photo || require('@/assets/images/h3.png')}
+                        style={styles.hospitalImage}
+                        contentFit="cover"
+                    />
+                    <LinearGradient
+                        colors={['transparent', 'rgba(0,0,0,0.8)']}
+                        style={styles.imageOverlay}
+                    />
+                    <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                        <MaterialCommunityIcons name="arrow-left" size={24} color="#fff" />
+                    </TouchableOpacity>
+                    <View style={styles.headerInfo}>
+                        <ThemedText style={styles.hospitalName}>{details.hospital.name}</ThemedText>
+                        <ThemedText style={styles.hospitalBio}>{details.hospital.bio || 'Multi-speciality Hospital'}</ThemedText>
+                        <View style={styles.ratingContainer}>
+                            <MaterialCommunityIcons name="star" size={16} color="#FFD700" />
+                            <ThemedText style={styles.ratingText}>{details.hospital.rating || 4.5}</ThemedText>
+                        </View>
+                    </View>
+                </View>
+
+                <View style={styles.contentContainer}>
+                    {/* Stats Overview */}
+                    <View style={styles.statsContainer}>
+                        <View style={styles.statItem}>
+                            <MaterialCommunityIcons name="bed" size={28} color={COLORS.primary} />
+                            <View>
+                                <ThemedText style={styles.statNumber}>{details.beds.length}</ThemedText>
+                                <ThemedText style={styles.statLabel}>Total Beds</ThemedText>
+                            </View>
+                        </View>
+                        <View style={styles.divider} />
+                        <View style={styles.statItem}>
+                            <MaterialCommunityIcons name="ambulance" size={28} color={COLORS.secondary} />
+                            <View>
+                                <ThemedText style={styles.statNumber}>{details.ambulances.length}</ThemedText>
+                                <ThemedText style={styles.statLabel}>Ambulances</ThemedText>
+                            </View>
+                        </View>
+                    </View>
+
+                    {/* Beds Section */}
+                    <View style={styles.sectionHeader}>
+                        <ThemedText style={styles.sectionTitle}>Select a Bed</ThemedText>
+                        <ThemedText style={styles.sectionSubtitle}>{details.beds.filter(b => b.isAvailable).length} Available Now</ThemedText>
+                    </View>
+
+                    <View style={styles.grid}>
+                        {details.beds.map((bed) => (
+                            <View key={bed._id} style={[styles.card, !bed.isAvailable && styles.cardDisabled]}>
+                                <MaterialCommunityIcons name="bed" size={24} color={bed.isAvailable ? COLORS.primary : COLORS.textLight} />
+                                <ThemedText style={styles.cardTitle}>{bed.bedNumber}</ThemedText>
+                                {bed.isAvailable ? (
+                                    <TouchableOpacity style={styles.bookButton} onPress={() => handleBookPress(bed, 'bed')}>
+                                        <ThemedText style={styles.bookButtonText}>Book</ThemedText>
+                                    </TouchableOpacity>
+                                ) : (
+                                    <View style={styles.bookedBadge}>
+                                        <ThemedText style={styles.bookedText}>Occupied</ThemedText>
+                                    </View>
+                                )}
+                            </View>
+                        ))}
+                        {details.beds.length === 0 && (
+                            <View style={styles.emptyContainer}>
+                                <MaterialCommunityIcons name="bed-empty" size={40} color={COLORS.textLight} />
+                                <ThemedText style={styles.emptyText}>No beds information available.</ThemedText>
+                            </View>
+                        )}
+                    </View>
+
+                    {/* Ambulances Section */}
+                    <View style={[styles.sectionHeader, { marginTop: 32 }]}>
+                        <ThemedText style={styles.sectionTitle}>Select an Ambulance</ThemedText>
+                        <ThemedText style={styles.sectionSubtitle}>{details.ambulances.filter(a => a.isAvailable).length} Available Now</ThemedText>
+                    </View>
+
+                    <View style={styles.list}>
+                        {details.ambulances.map((amb) => (
+                            <View key={amb._id} style={[styles.listCard, !amb.isAvailable && styles.cardDisabled]}>
+                                <View style={[styles.listIcon, !amb.isAvailable && { backgroundColor: '#F1F5F9' }]}>
+                                    <MaterialCommunityIcons name="ambulance" size={24} color={amb.isAvailable ? COLORS.secondary : COLORS.textLight} />
+                                </View>
+                                <View style={styles.listInfo}>
+                                    <ThemedText style={styles.cardTitle}>{amb.ambulanceNumber}</ThemedText>
+                                    <ThemedText style={styles.statusText}>{amb.isAvailable ? 'Ready for dispatch' : 'Currently on mission'}</ThemedText>
+                                </View>
+                                {amb.isAvailable ? (
+                                    <TouchableOpacity style={[styles.bookButton, { backgroundColor: COLORS.secondary, width: 'auto', paddingHorizontal: 20 }]} onPress={() => handleBookPress(amb, 'ambulance')}>
+                                        <ThemedText style={styles.bookButtonText}>Book</ThemedText>
+                                    </TouchableOpacity>
+                                ) : (
+                                    <View style={styles.bookedBadge}>
+                                        <ThemedText style={styles.bookedText}>Busy</ThemedText>
+                                    </View>
+                                )}
+                            </View>
+                        ))}
+                        {details.ambulances.length === 0 && (
+                            <View style={styles.emptyContainer}>
+                                <MaterialCommunityIcons name="ambulance" size={40} color={COLORS.textLight} />
+                                <ThemedText style={styles.emptyText}>No ambulance information available.</ThemedText>
+                            </View>
+                        )}
+                    </View>
+                </View>
+            </ScrollView>
+
+            {/* Booking Modal */}
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={modalVisible}
+                onRequestClose={() => setModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <ThemedText style={styles.modalTitle}>Confirm Booking</ThemedText>
+                        <ThemedText style={styles.modalSubtitle}>
+                            Booking {bookingType === 'bed' ? 'Bed' : 'Ambulance'} {bookingType === 'bed' ? (selectedItem as Bed)?.bedNumber : (selectedItem as Ambulance)?.ambulanceNumber}
+                        </ThemedText>
+
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Patient Name"
+                            placeholderTextColor={COLORS.textLight}
+                            value={patientName}
+                            onChangeText={setPatientName}
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Contact Number"
+                            placeholderTextColor={COLORS.textLight}
+                            value={contactNumber}
+                            onChangeText={setContactNumber}
+                            keyboardType="phone-pad"
+                        />
+
+                        <View style={styles.modalButtons}>
+                            <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
+                                <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.confirmButton} onPress={submitBooking} disabled={submitting}>
+                                {submitting ? <ActivityIndicator color="#fff" /> : <ThemedText style={styles.confirmButtonText}>Confirm</ThemedText>}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+        </View>
+    );
+}
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: COLORS.background,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    scrollContent: {
+        paddingBottom: 40,
+    },
+    imageContainer: {
+        height: 250,
+        width: '100%',
+        position: 'relative',
+    },
+    hospitalImage: {
+        width: '100%',
+        height: '100%',
+    },
+    imageOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    backButton: {
+        position: 'absolute',
+        top: 50,
+        left: 20,
+        padding: 8,
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        borderRadius: 20,
+    },
+    headerInfo: {
+        position: 'absolute',
+        bottom: 20,
+        left: 20,
+        right: 20,
+    },
+    hospitalName: {
+        color: '#fff',
+        fontSize: 24,
+        fontWeight: 'bold',
+    },
+    hospitalBio: {
+        color: 'rgba(255,255,255,0.8)',
+        fontSize: 14,
+        marginTop: 4,
+    },
+    ratingContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 8,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        alignSelf: 'flex-start',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+        gap: 4,
+    },
+    ratingText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 12,
+    },
+    contentContainer: {
+        padding: 20,
+        marginTop: -20,
+        backgroundColor: COLORS.background,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+    },
+    sectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    badge: {
+        backgroundColor: COLORS.success + '20',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    badgeText: {
+        color: COLORS.success,
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    grid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 12,
+    },
+    card: {
+        width: '30%',
+        backgroundColor: COLORS.white,
+        padding: 12,
+        borderRadius: 16,
+        alignItems: 'center',
+        gap: 8,
+        ...SHADOWS.small,
+    },
+    cardTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    bookButton: {
+        backgroundColor: COLORS.primary,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
+        width: '100%',
+        alignItems: 'center',
+    },
+    bookButtonText: {
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    unavailableText: {
+        color: COLORS.textLight,
+        fontSize: 12,
+        fontStyle: 'italic',
+    },
+    emptyText: {
+        color: COLORS.textLight,
+        fontStyle: 'italic',
+        width: '100%',
+        textAlign: 'center',
+        marginVertical: 10,
+    },
+    list: {
+        gap: 12,
+    },
+    listCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: COLORS.white,
+        padding: 12,
+        borderRadius: 16,
+        gap: 12,
+        ...SHADOWS.small,
+    },
+    listIcon: {
+        width: 48,
+        height: 48,
+        borderRadius: 12,
+        backgroundColor: COLORS.secondary + '10',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    listInfo: {
+        flex: 1,
+    },
+    statusText: {
+        fontSize: 12,
+        color: COLORS.textLight,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    modalContent: {
+        width: '100%',
+        backgroundColor: COLORS.white,
+        borderRadius: 24,
+        padding: 24,
+        alignItems: 'center',
+        ...SHADOWS.medium,
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginBottom: 8,
+    },
+    modalSubtitle: {
+        fontSize: 14,
+        color: COLORS.textLight,
+        marginBottom: 24,
+    },
+    input: {
+        width: '100%',
+        backgroundColor: COLORS.background,
+        padding: 16,
+        borderRadius: 12,
+        marginBottom: 16,
+        fontSize: 16,
+        color: COLORS.text,
+    },
+    modalButtons: {
+        flexDirection: 'row',
+        gap: 16,
+        width: '100%',
+        marginTop: 8,
+    },
+    cancelButton: {
+        flex: 1,
+        padding: 16,
+        borderRadius: 12,
+        backgroundColor: COLORS.background,
+        alignItems: 'center',
+    },
+    confirmButton: {
+        flex: 1,
+        padding: 16,
+        borderRadius: 12,
+        backgroundColor: COLORS.primary,
+        alignItems: 'center',
+    },
+    cancelButtonText: {
+        color: COLORS.text,
+        fontWeight: '600',
+    },
+    statsContainer: {
+        flexDirection: 'row',
+        backgroundColor: COLORS.white,
+        padding: 20,
+        borderRadius: 20,
+        marginBottom: 24,
+        ...SHADOWS.medium,
+        alignItems: 'center',
+    },
+    statItem: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        justifyContent: 'center',
+    },
+    statNumber: {
+        fontSize: 20,
+        fontWeight: '800',
+        color: COLORS.text,
+    },
+    statLabel: {
+        fontSize: 12,
+        color: COLORS.textLight,
+    },
+    divider: {
+        width: 1,
+        height: 40,
+        backgroundColor: '#E2E8F0',
+        marginHorizontal: 10,
+    },
+    sectionSubtitle: {
+        fontSize: 14,
+        color: COLORS.primary,
+        fontWeight: '600',
+    },
+    cardDisabled: {
+        opacity: 0.7,
+        backgroundColor: '#F8FAFC',
+    },
+    bookedBadge: {
+        backgroundColor: '#F1F5F9',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
+    },
+    bookedText: {
+        fontSize: 11,
+        color: COLORS.textLight,
+        fontWeight: '600',
+    },
+    emptyContainer: {
+        width: '100%',
+        alignItems: 'center',
+        padding: 20,
+        gap: 8,
+    },
+    confirmButtonText: {
+        color: '#fff',
+        fontWeight: '600',
+    },
+});
