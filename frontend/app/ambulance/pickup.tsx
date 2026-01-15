@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -34,21 +34,16 @@ export default function AmbulancePickupScreen() {
     const [contactNumber, setContactNumber] = useState('');
     const [pickupAddress, setPickupAddress] = useState('');
 
-    // Status Modal State (for errors)
-    const [statusModalVisible, setStatusModalVisible] = useState(false);
-    const [statusModalType, setStatusModalType] = useState<'success' | 'error'>('error');
-    const [statusModalMessage, setStatusModalMessage] = useState('');
-
-    const showStatus = (type: 'success' | 'error', message: string) => {
-        setStatusModalType(type);
-        setStatusModalMessage(message);
-        setStatusModalVisible(true);
-    };
-
     useEffect(() => {
-        fetchAmbulances();
+        if (hospitalId) {
+            fetchAmbulances();
+        } else {
+            // Fallback or error if arrived here without hospital
+            Alert.alert('Error', 'No hospital selected');
+            router.back();
+        }
         getUserLocation();
-    }, []);
+    }, [hospitalId]);
 
     const getUserLocation = async () => {
         // ... (unchanged)
@@ -74,6 +69,7 @@ export default function AmbulancePickupScreen() {
         try {
             setLoading(true);
             const data = await api.getAmbulances();
+            // Filter by available only
             const available = data.filter((a: any) => a.isAvailable);
             setAmbulances(available);
         } catch (error) {
@@ -106,6 +102,7 @@ export default function AmbulancePickupScreen() {
                 pickupLat: bookingLat,
                 pickupLon: bookingLon,
                 hospitalId: selectedAmbulance.hospital._id || selectedAmbulance.hospital,
+                ambulanceId: selectedAmbulance._id, // Pass specific ambulance ID
                 patientName,
                 contactNumber,
                 pickupAddress

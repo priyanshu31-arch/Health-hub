@@ -12,7 +12,7 @@ const auth = require('../middleware/auth');
 // @desc    Book the nearest available ambulance
 // @access  Public (Guest OK)
 router.post('/book', async (req, res) => {
-  const { pickupLat, pickupLon, hospitalId, patientName, contactNumber, pickupAddress } = req.body;
+  const { pickupLat, pickupLon, hospitalId, patientName, contactNumber, pickupAddress, ambulanceId } = req.body;
   const jwt = require('jsonwebtoken'); // Ensure jwt is imported
 
   if (!pickupLat || !pickupLon || !hospitalId) {
@@ -36,42 +36,56 @@ router.post('/book', async (req, res) => {
       return res.status(404).json({ msg: 'Hospital not found.' });
     }
 
-    // Find the nearest available ambulance to the user
-    // (Simplification: just find one available for this hospital)
-    const nearestAmbulance = await Ambulance.findOne({
-      hospital: hospitalId,
-      status: 'available',
-    });
+    let targetAmbulance = null;
 
-    if (!nearestAmbulance) {
-      return res.status(404).json({ msg: 'No available ambulances for this hospital.' });
+    if (ambulanceId) {
+      // Book specific ambulance
+      targetAmbulance = await Ambulance.findOne({
+        _id: ambulanceId,
+        hospital: hospitalId,
+        isAvailable: true // Match the GET request filter
+      });
+    } else {
+      // Find the nearest available ambulance to the user
+      // (Simplification: just find one available for this hospital)
+      targetAmbulance = await Ambulance.findOne({
+        hospital: hospitalId,
+        status: 'available',
+      });
+    }
+
+    if (!targetAmbulance) {
+      return res.status(404).json({ msg: 'Selected ambulance is no longer available.' });
     }
 
     // Assign the booking to the ambulance
     if (userId) {
-      nearestAmbulance.user = userId;
+      targetAmbulance.user = userId;
     }
-    nearestAmbulance.status = 'booked';
-    nearestAmbulance.pickupLocation = {
+    targetAmbulance.status = 'booked';
+    // Also set isAvailable to false so it doesn't show up in lists
+    targetAmbulance.isAvailable = false;
+
+    targetAmbulance.pickupLocation = {
       type: 'Point',
       coordinates: [pickupLon, pickupLat],
     };
     // destinationAddress is usually the hospital
-    nearestAmbulance.destinationAddress = hospital.name;
+    targetAmbulance.destinationAddress = hospital.name;
 
     // For demonstration, we'll set the ambulance's starting location nearby
-    nearestAmbulance.currentLocation = {
+    targetAmbulance.currentLocation = {
       type: 'Point',
       coordinates: [pickupLon + 0.005, pickupLat + 0.005], // Simulating a nearby start
     };
 
-    await nearestAmbulance.save();
+    await targetAmbulance.save();
 
     // Create a booking record for history
     const booking = new Booking({
       bookingType: 'ambulance',
       bookingTypeModel: 'Ambulance',
-      itemId: nearestAmbulance._id,
+      itemId: targetAmbulance._id,
       hospital: hospital._id,
       user: userId, // Can be null
       patientName: patientName || 'Guest',
@@ -82,8 +96,8 @@ router.post('/book', async (req, res) => {
     });
     await booking.save();
 
-    await nearestAmbulance.populate('hospital');
-    res.json(nearestAmbulance);
+    await targetAmbulance.populate('hospital');
+    res.json(targetAmbulance);
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');

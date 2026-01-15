@@ -308,14 +308,23 @@ export const api = {
     /**
      * Get all ambulances
      */
-    getAmbulances: async (): Promise<Ambulance[]> => {
-        return fetchApi<Ambulance[]>('/api/ambulances', { authenticated: false });
+    getAmbulances: async (hospitalId?: string, isAvailable?: boolean): Promise<Ambulance[]> => {
+        let url = '/api/ambulances';
+        const params: string[] = [];
+        if (hospitalId) params.push(`hospital=${hospitalId}`);
+        if (isAvailable !== undefined) params.push(`isAvailable=${isAvailable}`);
+
+        if (params.length > 0) {
+            url += `?${params.join('&')}`;
+        }
+
+        return fetchApi<Ambulance[]>(url, { authenticated: false });
     },
 
     /**
      * Book an ambulance
      */
-    bookAmbulance: async (bookingData: AmbulanceBookingData): Promise<Ambulance> => {
+    bookAmbulance: async (bookingData: AmbulanceBookingData & { ambulanceId?: string }): Promise<Ambulance> => {
         return fetchApi<Ambulance>('/api/ambulance/book', {
             method: 'POST',
             body: JSON.stringify(bookingData),
@@ -327,6 +336,16 @@ export const api = {
      */
     getAmbulanceStatus: async (ambulanceId: string): Promise<AmbulanceStatus> => {
         return fetchApi<AmbulanceStatus>(`/api/ambulance/status/${ambulanceId}`);
+    },
+
+    /**
+     * Update ambulance status (Admin)
+     */
+    updateAmbulanceStatus: async (ambulanceId: string, isAvailable: boolean): Promise<Ambulance> => {
+        return fetchApi<Ambulance>(`/api/ambulances/${ambulanceId}/status`, {
+            method: 'PUT',
+            body: JSON.stringify({ isAvailable }),
+        });
     },
 
     // ==========================================================================

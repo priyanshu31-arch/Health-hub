@@ -86,6 +86,17 @@ export default function ManageAmbulancesScreen() {
         ]);
     };
 
+    const handleFreeAmbulance = async (id: string) => {
+        try {
+            await api.updateAmbulanceStatus(id, true);
+            Alert.alert('Success', 'Ambulance is now available');
+            fetchData();
+        } catch (error) {
+            console.error(error);
+            Alert.alert('Error', 'Failed to update status');
+        }
+    };
+
     const renderItem = ({ item }: { item: any }) => (
         <View style={styles.card}>
             <View style={styles.cardContent}>
@@ -98,6 +109,15 @@ export default function ManageAmbulancesScreen() {
                         {item.isAvailable ? 'Ready' : 'On Mission'}
                     </ThemedText>
                 </View>
+                {/* Free Button if unavailable */}
+                {!item.isAvailable && (
+                    <TouchableOpacity
+                        style={styles.freeButton}
+                        onPress={() => handleFreeAmbulance(item._id)}
+                    >
+                        <MaterialCommunityIcons name="check-circle" size={24} color={COLORS.success} />
+                    </TouchableOpacity>
+                )}
             </View>
             <Pressable
                 onPress={() => handleDeleteAmbulance(item._id)}
@@ -215,6 +235,10 @@ const styles = StyleSheet.create({
         zIndex: 999,
         backgroundColor: 'rgba(255,255,255,0.9)',
         borderRadius: 8,
+    },
+    freeButton: {
+        marginRight: 40, // Make space for delete button
+        padding: 8,
     },
     emptyText: {
         textAlign: 'center',
