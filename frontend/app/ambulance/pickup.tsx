@@ -34,6 +34,20 @@ export default function AmbulancePickupScreen() {
     const [contactNumber, setContactNumber] = useState('');
     const [pickupAddress, setPickupAddress] = useState('');
 
+    // Status Modal State (for errors)
+    const [statusModalVisible, setStatusModalVisible] = useState(false);
+    const [statusModalType, setStatusModalType] = useState<'success' | 'error'>('error');
+    const [statusModalMessage, setStatusModalMessage] = useState('');
+
+    const showStatus = (type: 'success' | 'error', message: string) => {
+        setStatusModalType(type);
+        setStatusModalMessage(message);
+        setStatusModalVisible(true);
+    };
+
+    // Get hospitalId from params
+    const { hospitalId } = useLocalSearchParams();
+
     useEffect(() => {
         if (hospitalId) {
             fetchAmbulances();
@@ -46,7 +60,6 @@ export default function AmbulancePickupScreen() {
     }, [hospitalId]);
 
     const getUserLocation = async () => {
-        // ... (unchanged)
         try {
             const { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') {
@@ -68,10 +81,9 @@ export default function AmbulancePickupScreen() {
     const fetchAmbulances = async () => {
         try {
             setLoading(true);
-            const data = await api.getAmbulances();
-            // Filter by available only
-            const available = data.filter((a: any) => a.isAvailable);
-            setAmbulances(available);
+            // Pass hospitalId and isAvailable=true
+            const data = await api.getAmbulances(hospitalId as string, true);
+            setAmbulances(data);
         } catch (error) {
             console.error(error);
             showStatus('error', 'Failed to fetch ambulances');
