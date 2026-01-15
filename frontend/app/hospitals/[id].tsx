@@ -8,6 +8,7 @@ import { COLORS, SHADOWS } from '../../constants/theme';
 import { ThemedText } from '../../components/themed-text';
 import { api } from '../config/api.config';
 import * as Haptics from 'expo-haptics';
+import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 
 interface Bed {
     _id: string;
@@ -103,7 +104,8 @@ export default function HospitalDetailsScreen() {
 
             await api.bookBed(bookingData as any);
 
-            // Show success view
+            // Show success view with haptic feedback
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             setBookingSuccess(true);
             setPatientName('');
             setContactNumber('');
@@ -284,8 +286,17 @@ export default function HospitalDetailsScreen() {
                                     placeholder="Contact Number"
                                     placeholderTextColor={COLORS.textLight}
                                     value={contactNumber}
-                                    onChangeText={(text) => setContactNumber(text.replace(/[^0-9]/g, ''))}
-                                    maxLength={10}
+                                    onChangeText={(text) => {
+                                        const numbersOnly = text.replace(/[^0-9]/g, '');
+                                        if (text !== numbersOnly && text.length > 0) {
+                                            Alert.alert('Invalid Input', 'Please enter numbers only');
+                                        }
+                                        if (numbersOnly.length <= 10) {
+                                            setContactNumber(numbersOnly);
+                                        } else {
+                                            Alert.alert('Limit Reached', 'Contact number cannot exceed 10 digits');
+                                        }
+                                    }}
                                     keyboardType="phone-pad"
                                 />
 
@@ -305,7 +316,10 @@ export default function HospitalDetailsScreen() {
                             </>
                         ) : (
                             // Success View
-                            <View style={styles.successContainer}>
+                            <Animated.View
+                                entering={ZoomIn.duration(400).springify()}
+                                style={styles.successContainer}
+                            >
                                 <View style={styles.successIconCircle}>
                                     <MaterialCommunityIcons name="check" size={40} color="#fff" />
                                 </View>
@@ -323,7 +337,7 @@ export default function HospitalDetailsScreen() {
                                 >
                                     <ThemedText style={styles.confirmButtonText}>Done</ThemedText>
                                 </TouchableOpacity>
-                            </View>
+                            </Animated.View>
                         )}
                     </View>
                 </View>

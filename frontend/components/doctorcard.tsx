@@ -42,16 +42,36 @@ export default function DoctorCard({ doctor, onPress }: DoctorCardProps) {
       >
         <View style={styles.imageContainer}>
           <Image source={doctor.image} style={styles.image} contentFit="cover" />
+
+          {/* Verified Badge */}
+          <View style={styles.verifiedBadge}>
+            <MaterialCommunityIcons name="check-decagram" size={16} color={COLORS.primary} />
+          </View>
+
+          {/* Rating Badge */}
           <View style={styles.ratingBadge}>
             <MaterialCommunityIcons name="star" size={12} color="#FFD700" />
             <ThemedText style={styles.ratingText}>{doctor.rating}</ThemedText>
           </View>
         </View>
+
         <View style={styles.info}>
           <ThemedText style={styles.name} numberOfLines={1}>{doctor.name}</ThemedText>
-          <ThemedText style={styles.specialization}>{doctor.specialization}</ThemedText>
+
+          <View style={styles.specializationRow}>
+            <MaterialCommunityIcons name="stethoscope" size={12} color={COLORS.primary} />
+            <ThemedText style={styles.specialization} numberOfLines={1}>{doctor.specialization}</ThemedText>
+          </View>
+
+          {/* Availability */}
+          <View style={styles.availabilityRow}>
+            <View style={styles.availabilityDot} />
+            <ThemedText style={styles.availabilityText}>Available Today</ThemedText>
+          </View>
+
           <TouchableOpacity style={styles.bookButton}>
-            <ThemedText style={styles.bookButtonText}>Book</ThemedText>
+            <ThemedText style={styles.bookButtonText}>Book Appointment</ThemedText>
+            <MaterialCommunityIcons name="arrow-right-circle" size={16} color={COLORS.white} />
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -80,6 +100,15 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: COLORS.surface,
   },
+  verifiedBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    padding: 4,
+    ...SHADOWS.small,
+  },
   ratingBadge: {
     position: 'absolute',
     top: 8,
@@ -104,24 +133,50 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: COLORS.text,
-    marginBottom: 4,
+    marginBottom: 6,
+  },
+  specializationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 8,
   },
   specialization: {
-    fontSize: 12,
+    fontSize: 11,
     color: COLORS.textLight,
-    marginBottom: 12,
+    flex: 1,
+  },
+  availabilityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 10,
+  },
+  availabilityDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.success,
+  },
+  availabilityText: {
+    fontSize: 10,
+    color: COLORS.success,
+    fontWeight: '600',
   },
   bookButton: {
-    backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 10,
     width: '100%',
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 4,
   },
   bookButtonText: {
-    color: COLORS.primary,
-    fontSize: 12,
-    fontWeight: '600',
+    color: COLORS.white,
+    fontSize: 11,
+    fontWeight: '700',
   },
 });

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Switch } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Switch, Alert } from 'react-native';
 
 interface AuthFormProps {
     type: 'login' | 'signup';
@@ -77,6 +77,8 @@ export default function AuthForm({ type, onSubmit, isLoading, onToggle }: AuthFo
                 onChangeText={(text) => {
                     if (text.length <= 15) {
                         setPassword(text);
+                    } else {
+                        Alert.alert('Limit Reached', 'Password cannot exceed 15 characters');
                     }
                 }}
                 secureTextEntry

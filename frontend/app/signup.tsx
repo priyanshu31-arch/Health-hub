@@ -54,7 +54,7 @@ export default function SignupScreen() {
     return (
         <SafeAreaView style={styles.container}>
             <LinearGradient
-                colors={[COLORS.primary, COLORS.accent, COLORS.secondary]}
+                colors={[COLORS.gradient1, COLORS.gradient2, COLORS.gradient3]}
                 style={styles.gradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}

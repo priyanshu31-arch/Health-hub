@@ -178,7 +178,17 @@ export default function HospitalEnquiryScreen() {
                     style={styles.input}
                     placeholder="Contact Number"
                     value={contactNumber}
-                    onChangeText={setContactNumber}
+                    onChangeText={(text) => {
+                        const numbersOnly = text.replace(/[^0-9]/g, '');
+                        if (text !== numbersOnly && text.length > 0) {
+                            Alert.alert('Invalid Input', 'Please enter numbers only');
+                        }
+                        if (numbersOnly.length <= 10) {
+                            setContactNumber(numbersOnly);
+                        } else {
+                            Alert.alert('Limit Reached', 'Contact number cannot exceed 10 digits');
+                        }
+                    }}
                     placeholderTextColor={COLORS.textLight}
                     keyboardType="phone-pad"
                 />

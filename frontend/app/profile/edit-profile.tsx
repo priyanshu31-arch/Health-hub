@@ -229,8 +229,17 @@ export default function EditProfile() {
               <TextInput
                 style={styles.input}
                 value={age}
-                onChangeText={(text) => setAge(text.replace(/[^0-9]/g, ''))}
-                maxLength={3}
+                onChangeText={(text) => {
+                  const numbersOnly = text.replace(/[^0-9]/g, '');
+                  if (text !== numbersOnly && text.length > 0) {
+                    Alert.alert('Invalid Input', 'Please enter numbers only');
+                  }
+                  if (numbersOnly.length <= 3) {
+                    setAge(numbersOnly);
+                  } else {
+                    Alert.alert('Limit Reached', 'Age cannot exceed 3 digits');
+                  }
+                }}
                 placeholder="Age"
                 placeholderTextColor="#999"
                 keyboardType="numeric"
@@ -242,8 +251,17 @@ export default function EditProfile() {
               <TextInput
                 style={styles.input}
                 value={phone}
-                onChangeText={(text) => setPhone(text.replace(/[^0-9]/g, ''))}
-                maxLength={10}
+                onChangeText={(text) => {
+                  const numbersOnly = text.replace(/[^0-9]/g, '');
+                  if (text !== numbersOnly && text.length > 0) {
+                    Alert.alert('Invalid Input', 'Please enter numbers only');
+                  }
+                  if (numbersOnly.length <= 10) {
+                    setPhone(numbersOnly);
+                  } else {
+                    Alert.alert('Limit Reached', 'Phone number cannot exceed 10 digits');
+                  }
+                }}
                 placeholder="Phone Number"
                 placeholderTextColor="#999"
                 keyboardType="phone-pad"

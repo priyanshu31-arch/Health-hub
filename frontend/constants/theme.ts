@@ -1,10 +1,11 @@
 export const COLORS = {
-  primary: '#E11D48', // Elegant Rose/Red
-  primaryLight: '#FFF1F2',
-  secondary: '#0F172A', // Slate Dark
-  accent: '#F43F5E',
-  background: '#FFFFFF',
-  surface: '#F8FAFC',
+  primary: '#0891B2', // Medical Teal/Cyan
+  primaryLight: '#CFFAFE',
+  primaryDark: '#0E7490',
+  secondary: '#0F766E', // Deep Teal
+  accent: '#06B6D4',
+  background: '#F8FAFC',
+  surface: '#FFFFFF',
   text: '#0F172A',
   textLight: '#64748B',
   white: '#FFFFFF',
@@ -13,6 +14,10 @@ export const COLORS = {
   warning: '#F59E0B',
   error: '#EF4444',
   border: '#E2E8F0',
+  cardBg: '#FFFFFF',
+  gradient1: '#06B6D4',
+  gradient2: '#0891B2',
+  gradient3: '#0E7490',
 };
 
 export const Colors = {

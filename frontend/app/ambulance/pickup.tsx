@@ -265,8 +265,17 @@ export default function AmbulancePickupScreen() {
                                         style={styles.input}
                                         placeholder="Driver will call this number"
                                         value={contactNumber}
-                                        onChangeText={(text) => setContactNumber(text.replace(/[^0-9]/g, ''))}
-                                        maxLength={10}
+                                        onChangeText={(text) => {
+                                            const numbersOnly = text.replace(/[^0-9]/g, '');
+                                            if (text !== numbersOnly && text.length > 0) {
+                                                Alert.alert('Invalid Input', 'Please enter numbers only');
+                                            }
+                                            if (numbersOnly.length <= 10) {
+                                                setContactNumber(numbersOnly);
+                                            } else {
+                                                Alert.alert('Limit Reached', 'Contact number cannot exceed 10 digits');
+                                            }
+                                        }}
                                         keyboardType="phone-pad"
                                         placeholderTextColor={COLORS.textLight}
                                     />
