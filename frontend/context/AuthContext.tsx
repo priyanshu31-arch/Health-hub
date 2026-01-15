@@ -8,6 +8,7 @@ interface AuthContextType {
     isLoading: boolean;
     login: (token: string, userData: any) => Promise<void>;
     logout: () => Promise<void>;
+    updateUser: (userData: any) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -16,6 +17,7 @@ const AuthContext = createContext<AuthContextType>({
     isLoading: true,
     login: async () => { },
     logout: async () => { },
+    updateUser: async () => { },
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -93,8 +95,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     };
 
+    const updateUser = async (updatedData: any) => {
+        try {
+            const newUser = { ...user, ...updatedData };
+            await AsyncStorage.setItem('user', JSON.stringify(newUser));
+            setUser(newUser);
+        } catch (error) {
+            console.error('Update user error', error);
+        }
+    };
+
     return (
-        <AuthContext.Provider value={{ user, token, isLoading, login, logout }}>
+        <AuthContext.Provider value={{ user, token, isLoading, login, logout, updateUser }}>
             {children}
         </AuthContext.Provider>
     );

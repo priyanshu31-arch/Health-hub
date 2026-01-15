@@ -16,6 +16,7 @@ import { ThemedText } from '../../components/themed-text';
 import { COLORS, SHADOWS } from '../../constants/theme';
 import { api } from '../config/api.config';
 import * as Location from 'expo-location';
+import StatusModal from '@/components/StatusModal';
 
 export default function AmbulancePickupScreen() {
     const router = useRouter();
@@ -33,16 +34,27 @@ export default function AmbulancePickupScreen() {
     const [contactNumber, setContactNumber] = useState('');
     const [pickupAddress, setPickupAddress] = useState('');
 
+    // Status Modal State (for errors)
+    const [statusModalVisible, setStatusModalVisible] = useState(false);
+    const [statusModalType, setStatusModalType] = useState<'success' | 'error'>('error');
+    const [statusModalMessage, setStatusModalMessage] = useState('');
+
+    const showStatus = (type: 'success' | 'error', message: string) => {
+        setStatusModalType(type);
+        setStatusModalMessage(message);
+        setStatusModalVisible(true);
+    };
+
     useEffect(() => {
         fetchAmbulances();
         getUserLocation();
     }, []);
 
     const getUserLocation = async () => {
+        // ... (unchanged)
         try {
             const { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') {
-                // Default to Bangalore if permission denied
                 setUserLocation({ lat: 12.9716, lon: 77.5946 });
                 return;
             }
@@ -52,14 +64,8 @@ export default function AmbulancePickupScreen() {
                 lat: location.coords.latitude,
                 lon: location.coords.longitude
             });
-
-            // Optional: Reverse Geocode to get address string automatically
-            // const [address] = await Location.reverseGeocodeAsync(location.coords);
-            // if (address) setPickupAddress(`${address.street}, ${address.city}`);
-
         } catch (error) {
             console.error('Error getting location:', error);
-            // Default fallback
             setUserLocation({ lat: 12.9716, lon: 77.5946 });
         }
     };
@@ -68,34 +74,28 @@ export default function AmbulancePickupScreen() {
         try {
             setLoading(true);
             const data = await api.getAmbulances();
-            // Filter by available only
             const available = data.filter((a: any) => a.isAvailable);
             setAmbulances(available);
         } catch (error) {
             console.error(error);
-            Alert.alert('Error', 'Failed to fetch ambulances');
+            showStatus('error', 'Failed to fetch ambulances');
         } finally {
             setLoading(false);
         }
     };
 
     const initiateBooking = (ambulance: any) => {
-        // Even if location is not yet fetched, allow opening the modal
-        // We will validate location before final confirmation
         setSelectedAmbulance(ambulance);
-        setBookingSuccess(false); // Reset success state
+        setBookingSuccess(false);
         setModalVisible(true);
     };
 
     const confirmBooking = async () => {
         if (!patientName || !contactNumber) {
-            Alert.alert('Error', 'Please fill in patient name and contact number');
+            showStatus('error', 'Please fill in patient name and contact number');
             return;
         }
 
-        // Use current location or a default if still not available, but ideally we should have it by now
-        // or user should have entered a manual location (if we added that field).
-        // For now, let's stick to the coordinates.
         const bookingLat = userLocation?.lat || 12.9716;
         const bookingLon = userLocation?.lon || 77.5946;
 
@@ -111,22 +111,20 @@ export default function AmbulancePickupScreen() {
                 pickupAddress
             };
 
-            console.log('Booking Ambulance:', bookingData);
             const result = await api.bookAmbulance(bookingData);
-            console.log('Booking Result:', result);
-
-            // Instead of closing, show success view
             setConfirmedBooking(result);
             setBookingSuccess(true);
-
-            // Clear form
             setPatientName('');
             setContactNumber('');
             setPickupAddress('');
-
         } catch (error: any) {
             console.error('Booking Error:', error);
-            Alert.alert('Error', error.message || 'Failed to book ambulance');
+            const msg = error.message || 'Failed to book ambulance';
+            // Close the booking modal so the error modal is visible?
+            // Or show on top. Modals on top of modals can be tricky on Android.
+            // Let's close booking modal first.
+            setModalVisible(false);
+            setTimeout(() => showStatus('error', msg), 400);
         } finally {
             setBookingLoading(false);
         }
@@ -258,7 +256,8 @@ export default function AmbulancePickupScreen() {
                                         style={styles.input}
                                         placeholder="Driver will call this number"
                                         value={contactNumber}
-                                        onChangeText={setContactNumber}
+                                        onChangeText={(text) => setContactNumber(text.replace(/[^0-9]/g, ''))}
+                                        maxLength={10}
                                         keyboardType="phone-pad"
                                         placeholderTextColor={COLORS.textLight}
                                     />
@@ -314,6 +313,13 @@ export default function AmbulancePickupScreen() {
                     </View>
                 </View>
             </Modal>
+
+            <StatusModal
+                visible={statusModalVisible}
+                type={statusModalType}
+                message={statusModalMessage}
+                onClose={() => setStatusModalVisible(false)}
+            />
         </View>
     );
 }

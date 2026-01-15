@@ -74,8 +74,13 @@ export default function AuthForm({ type, onSubmit, isLoading, onToggle }: AuthFo
                 style={styles.input}
                 placeholder="Password"
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={(text) => {
+                    if (text.length <= 15) {
+                        setPassword(text);
+                    }
+                }}
                 secureTextEntry
+                maxLength={15}
             />
 
             <TouchableOpacity

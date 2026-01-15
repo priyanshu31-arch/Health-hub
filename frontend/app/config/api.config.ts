@@ -458,7 +458,14 @@ export const api = {
     /**
      * Update user profile
      */
-    updateProfile: async (data: { name?: string; profilePhoto?: string }): Promise<AuthResponse['user']> => {
+    updateProfile: async (data: {
+        name?: string;
+        email?: string;
+        profilePhoto?: string;
+        age?: string;
+        location?: string;
+        phone?: string;
+    }): Promise<AuthResponse['user']> => {
         return fetchApi<AuthResponse['user']>('/api/auth/profile', {
             method: 'PUT',
             body: JSON.stringify(data),

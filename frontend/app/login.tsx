@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Alert, Text, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, StyleSheet, Text, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import AuthForm from '@/components/AuthForm';
@@ -7,11 +7,25 @@ import { useAuth } from '@/context/AuthContext';
 import { api } from '@/app/config/api.config';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { COLORS } from '@/constants/theme';
+import StatusModal from '@/components/StatusModal';
 
 export default function LoginScreen() {
     const router = useRouter();
     const { login } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
+
+    // Status Modal State
+    const [modalVisible, setModalVisible] = useState(false);
+    const [modalType, setModalType] = useState<'success' | 'error'>('success');
+    const [modalMessage, setModalMessage] = useState('');
+    const [modalAction, setModalAction] = useState<(() => void) | undefined>(undefined);
+
+    const showStatus = (type: 'success' | 'error', message: string, action?: () => void) => {
+        setModalType(type);
+        setModalMessage(message);
+        setModalAction(() => action);
+        setModalVisible(true);
+    };
 
     const handleLogin = async (data: any) => {
         setIsLoading(true);
@@ -22,20 +36,20 @@ export default function LoginScreen() {
             });
 
             if (res.token) {
-                await login(res.token, res.user);
-                Alert.alert('Success', 'Logged in successfully');
+                showStatus('success', 'Logged in successfully', async () => {
+                    await login(res.token, res.user);
+                });
             }
         } catch (error: any) {
             console.error('Login Error:', error);
             const msg = error.message || 'Login failed';
 
             if (msg.includes('User not registered')) {
-                Alert.alert('Account Not Found', 'This email is not registered. Please sign up first.', [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Sign Up', onPress: () => router.push('/signup') }
-                ]);
+                showStatus('error', 'This email is not registered. Please sign up first.', () => {
+                    router.push('/signup');
+                });
             } else {
-                Alert.alert('Error', msg);
+                showStatus('error', msg);
             }
         } finally {
             setIsLoading(false);
@@ -67,7 +81,6 @@ export default function LoginScreen() {
                             entering={FadeInUp.delay(400).duration(1000).springify()}
                             style={styles.card}
                         >
-                            <Text style={styles.welcomeText}>Welcome Back</Text>
                             <AuthForm
                                 type="login"
                                 onSubmit={handleLogin}
@@ -78,6 +91,15 @@ export default function LoginScreen() {
                     </View>
                 </KeyboardAvoidingView>
             </LinearGradient>
+
+            <StatusModal
+                visible={modalVisible}
+                type={modalType}
+                message={modalMessage}
+                onClose={() => setModalVisible(false)}
+                onAction={modalAction}
+                actionText={modalType === 'error' && modalMessage.includes('not registered') ? 'Sign Up' : 'OK'}
+            />
         </SafeAreaView>
     );
 }

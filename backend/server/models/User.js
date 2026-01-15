@@ -27,6 +27,18 @@ const UserSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
+  age: {
+    type: String,
+    required: false,
+  },
+  location: {
+    type: String,
+    required: false,
+  },
+  phone: {
+    type: String,
+    required: false,
+  },
 });
 
 module.exports = mongoose.model('User', UserSchema);

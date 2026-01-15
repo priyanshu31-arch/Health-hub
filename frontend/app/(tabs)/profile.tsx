@@ -22,48 +22,6 @@ export default function ProfileScreen() {
   const [logoutVisible, setLogoutVisible] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Sorry, we need camera roll permissions to make this work!');
-      return;
-    }
-
-    let result = await ImagePicker.launchImagePickerAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.5,
-    });
-
-    if (!result.canceled) {
-      handleImageUpload(result.assets[0].uri);
-    }
-  };
-
-  const handleImageUpload = async (uri: string) => {
-    setUploading(true);
-    try {
-      const formData = new FormData();
-      // @ts-ignore
-      formData.append('image', {
-        uri,
-        name: 'profile.jpg',
-        type: 'image/jpeg',
-      });
-
-      const { url } = await api.uploadImage(formData);
-      await api.updateProfile({ profilePhoto: url });
-
-      Alert.alert('Success', 'Profile photo updated! Please logout and login to see changes fully.');
-    } catch (error: any) {
-      console.error(error);
-      Alert.alert('Error', 'Failed to upload image');
-    } finally {
-      setUploading(false);
-    }
-  };
-
   const confirmLogout = async () => {
     setLogoutVisible(false);
     await logout();
@@ -133,13 +91,6 @@ export default function ProfileScreen() {
               contentFit="cover"
               transition={1000}
             />
-            <TouchableOpacity
-              style={styles.cameraBtn}
-              onPress={pickImage}
-              disabled={uploading}
-            >
-              <MaterialCommunityIcons name="camera" size={20} color="#FFF" />
-            </TouchableOpacity>
           </View>
 
           <Text style={styles.name}>{user?.name || 'User'}</Text>
@@ -153,11 +104,21 @@ export default function ProfileScreen() {
 
           <TouchableOpacity
             style={styles.editBtn}
-            onPress={pickImage}
+            onPress={() => router.push('/profile/edit-profile')}
           >
             <MaterialCommunityIcons name="pencil" size={16} color="#FFF" />
-            <Text style={styles.editBtnText}>{uploading ? 'Uploading...' : 'Change Photo'}</Text>
+            <Text style={styles.editBtnText}>Edit Profile</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* Personal Info */}
+        <View style={styles.infoSection}>
+          <Text style={styles.sectionTitle}>Personal Information</Text>
+          <View style={styles.infoCard}>
+            <InfoItem icon="calendar" label="Age" value={user?.age || 'Not set'} />
+            <InfoItem icon="map-marker" label="Location" value={user?.location || 'Not set'} />
+            <InfoItem icon="phone" label="Phone" value={user?.phone || 'Not set'} />
+          </View>
         </View>
 
         {/* Stats */}
@@ -261,6 +222,20 @@ export default function ProfileScreen() {
         </View>
       </Modal>
     </>
+  );
+}
+
+function InfoItem({ icon, label, value }: { icon: any, label: string, value: string }) {
+  return (
+    <View style={styles.infoItem}>
+      <View style={styles.infoIconContainer}>
+        <MaterialCommunityIcons name={icon} size={20} color={COLORS.primary} />
+      </View>
+      <View style={styles.infoTextContainer}>
+        <Text style={styles.infoLabel}>{label}</Text>
+        <Text style={styles.infoValue}>{value}</Text>
+      </View>
+    </View>
   );
 }
 
@@ -430,6 +405,62 @@ const styles = StyleSheet.create({
   menu: {
     backgroundColor: COLORS.white,
     marginBottom: 16,
+  },
+
+  infoSection: {
+    backgroundColor: COLORS.white,
+    marginBottom: 16,
+    paddingBottom: 20,
+  },
+
+  infoCard: {
+    paddingHorizontal: 20,
+    gap: 16,
+  },
+
+  infoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+
+  infoIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.primary + '10',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  infoTextContainer: {
+    flex: 1,
+  },
+
+  infoLabel: {
+    fontSize: 12,
+    color: COLORS.textLight,
+    marginBottom: 2,
+  },
+
+  infoValue: {
+    fontSize: 15,
+    color: COLORS.text,
+    fontWeight: '600',
+  },
+
+  cameraBtn: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: COLORS.primary,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.white,
   },
 
   sectionTitle: {

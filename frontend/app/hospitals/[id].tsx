@@ -284,7 +284,8 @@ export default function HospitalDetailsScreen() {
                                     placeholder="Contact Number"
                                     placeholderTextColor={COLORS.textLight}
                                     value={contactNumber}
-                                    onChangeText={setContactNumber}
+                                    onChangeText={(text) => setContactNumber(text.replace(/[^0-9]/g, ''))}
+                                    maxLength={10}
                                     keyboardType="phone-pad"
                                 />
 
