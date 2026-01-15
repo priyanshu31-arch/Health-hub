@@ -3,6 +3,7 @@ const router = express.Router();
 const Hospital = require('../models/Hospital');
 const Bed = require('../models/Bed');
 const Ambulance = require('../models/Ambulance');
+const Booking = require('../models/Booking');
 const auth = require('../middleware/auth');
 
 // @route   GET /hospitals
@@ -30,7 +31,24 @@ router.get('/me', auth, async (req, res) => {
     }
 
     const beds = await Bed.find({ hospital: hospital._id });
-    const ambulances = await Ambulance.find({ hospital: hospital._id });
+    const rawAmbulances = await Ambulance.find({ hospital: hospital._id });
+
+    // Enhance ambulances with activeBookingId if unavailable
+    const ambulances = await Promise.all(rawAmbulances.map(async (amb) => {
+      const ambObj = amb.toObject();
+      if (!amb.isAvailable) {
+        // Find latest booking
+        const booking = await Booking.findOne({
+          itemId: amb._id,
+          bookingType: 'ambulance'
+        }).sort({ bookedAt: -1 });
+
+        if (booking) {
+          ambObj.activeBookingId = booking._id;
+        }
+      }
+      return ambObj;
+    }));
 
     res.json({ hospital, beds, ambulances });
   } catch (err) {

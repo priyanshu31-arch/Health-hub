@@ -5,6 +5,7 @@ import {
     Alert,
     FlatList,
     Modal,
+    Platform,
     Pressable,
     StyleSheet,
     TextInput,
@@ -68,22 +69,35 @@ export default function ManageAmbulancesScreen() {
     };
 
     const handleDeleteAmbulance = async (id: string) => {
-        Alert.alert('Delete Ambulance', 'Are you sure you want to delete this ambulance?', [
-            { text: 'Cancel', style: 'cancel' },
-            {
-                text: 'Delete',
-                style: 'destructive',
-                onPress: async () => {
-                    try {
-                        await api.deleteAmbulance(id);
-                        Alert.alert('Success', 'Ambulance removed successfully');
-                        fetchData();
-                    } catch (error) {
-                        Alert.alert('Error', 'Failed to delete ambulance');
-                    }
-                }
+        console.log('Attempting to delete ambulance:', id);
+
+        const deleteAction = async () => {
+            try {
+                await api.deleteAmbulance(id);
+                if (Platform.OS === 'web') alert('Ambulance removed successfully');
+                else Alert.alert('Success', 'Ambulance removed successfully');
+                fetchData();
+            } catch (error: any) {
+                console.error('Delete failed:', error);
+                if (Platform.OS === 'web') alert('Failed to delete: ' + error.message);
+                else Alert.alert('Error', 'Failed to delete: ' + error.message);
             }
-        ]);
+        };
+
+        if (Platform.OS === 'web') {
+            if (window.confirm('Are you sure you want to delete this ambulance?')) {
+                await deleteAction();
+            }
+        } else {
+            Alert.alert('Delete Ambulance', 'Are you sure you want to delete this ambulance?', [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: deleteAction
+                }
+            ]);
+        }
     };
 
     const handleFreeAmbulance = async (id: string) => {
@@ -95,6 +109,28 @@ export default function ManageAmbulancesScreen() {
             console.error(error);
             Alert.alert('Error', 'Failed to update status');
         }
+    };
+
+    const handleTrackAmbulance = (ambulance: any) => {
+        if (!ambulance.currentLocation) {
+            Alert.alert('Info', 'No active location for this ambulance');
+            return;
+        }
+
+        // Navigate to tracking
+        router.push({
+            pathname: '/tracking',
+            params: {
+                bookingId: ambulance.activeBookingId, // Pass the booking ID
+                vehicleNumber: ambulance.ambulanceNumber,
+                role: 'admin',
+                pickupLat: ambulance.currentLocation.coordinates[1],
+                pickupLon: ambulance.currentLocation.coordinates[0],
+                // Add dummy drop location if needed or handle in tracking screen
+                dropLat: ambulance.currentLocation.coordinates[1] + 0.01,
+                dropLon: ambulance.currentLocation.coordinates[0] + 0.01,
+            }
+        });
     };
 
     const renderItem = ({ item }: { item: any }) => (
@@ -109,22 +145,38 @@ export default function ManageAmbulancesScreen() {
                         {item.isAvailable ? 'Ready' : 'On Mission'}
                     </ThemedText>
                 </View>
-                {/* Free Button if unavailable */}
-                {!item.isAvailable && (
+
+                {/* Actions Row */}
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    {/* Track Button if unavailable */}
+                    {!item.isAvailable && (
+                        <TouchableOpacity
+                            style={styles.actionButton}
+                            onPress={() => handleTrackAmbulance(item)}
+                        >
+                            <MaterialCommunityIcons name="map-marker-radius" size={24} color={COLORS.primary} />
+                        </TouchableOpacity>
+                    )}
+
+                    {/* Free Button if unavailable */}
+                    {!item.isAvailable && (
+                        <TouchableOpacity
+                            style={styles.actionButton}
+                            onPress={() => handleFreeAmbulance(item._id)}
+                        >
+                            <MaterialCommunityIcons name="check-circle" size={24} color={COLORS.success} />
+                        </TouchableOpacity>
+                    )}
+
+                    {/* Delete Button */}
                     <TouchableOpacity
-                        style={styles.freeButton}
-                        onPress={() => handleFreeAmbulance(item._id)}
+                        onPress={() => handleDeleteAmbulance(item._id)}
+                        style={styles.actionButton}
                     >
-                        <MaterialCommunityIcons name="check-circle" size={24} color={COLORS.success} />
+                        <MaterialCommunityIcons name="delete" size={24} color={COLORS.error} />
                     </TouchableOpacity>
-                )}
+                </View>
             </View>
-            <Pressable
-                onPress={() => handleDeleteAmbulance(item._id)}
-                style={styles.deleteButton}
-            >
-                <MaterialCommunityIcons name="delete" size={24} color={COLORS.error} />
-            </Pressable>
         </View>
     );
 
@@ -225,21 +277,11 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: '600',
     },
-    deleteButton: {
-        position: 'absolute',
-        top: 16,
-        right: 16,
+    actionButton: {
         padding: 8,
-        cursor: 'pointer',
-        pointerEvents: 'auto',
-        zIndex: 999,
-        backgroundColor: 'rgba(255,255,255,0.9)',
-        borderRadius: 8,
+        marginLeft: 4,
     },
-    freeButton: {
-        marginRight: 40, // Make space for delete button
-        padding: 8,
-    },
+    // Removed old specific buttons to use generic actionButton
     emptyText: {
         textAlign: 'center',
         color: COLORS.textLight,

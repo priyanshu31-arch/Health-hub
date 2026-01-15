@@ -49,6 +49,29 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
+// @route   PUT /beds/:id/status
+// @desc    Update bed status (Free/Occupied)
+// @access  Private
+router.put('/:id/status', auth, async (req, res) => {
+  const { isAvailable } = req.body;
+  try {
+    let bed = await Bed.findById(req.params.id);
+    if (!bed) return res.status(404).json({ msg: 'Bed not found' });
+
+    const hospital = await Hospital.findById(bed.hospital);
+    if (hospital.user.toString() !== req.user.id) {
+      return res.status(401).json({ msg: 'Not authorized' });
+    }
+
+    bed.isAvailable = isAvailable;
+    await bed.save();
+    res.json(bed);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
 // @route   DELETE /beds/:id
 // @desc    Delete a bed
 // @access  Private

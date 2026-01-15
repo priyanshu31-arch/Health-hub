@@ -96,7 +96,12 @@ router.delete('/:id', auth, async (req, res) => {
 
     const hospital = await Hospital.findById(ambulance.hospital);
 
+    // Debug user ID matching
+    console.log('Delete Request - User ID from Token:', req.user.id);
+    console.log('Delete Request - Hospital User ID:', hospital.user.toString());
+
     if (hospital.user.toString() !== req.user.id) {
+      console.log('Authorization Failed');
       return res.status(401).json({ msg: 'Not authorized' });
     }
 

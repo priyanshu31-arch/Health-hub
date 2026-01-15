@@ -104,6 +104,19 @@ export default function ManageBedsScreen() {
         }
     };
 
+    const handleFreeBed = async (id: string) => {
+        try {
+            await api.updateBedStatus(id, true);
+            if (Platform.OS === 'web') alert('Bed is now available');
+            else Alert.alert('Success', 'Bed is now available');
+            fetchData();
+        } catch (error) {
+            console.error(error);
+            if (Platform.OS === 'web') alert('Failed to update status');
+            else Alert.alert('Error', 'Failed to update status');
+        }
+    };
+
     const renderItem = ({ item }: { item: any }) => (
         <View style={styles.card}>
             <View style={styles.cardContent}>
@@ -114,11 +127,19 @@ export default function ManageBedsScreen() {
                         {item.isAvailable ? 'Available' : 'Occupied'}
                     </ThemedText>
                 </View>
+                {!item.isAvailable && (
+                    <TouchableOpacity
+                        style={styles.freeButton}
+                        onPress={() => handleFreeBed(item._id)}
+                    >
+                        <MaterialCommunityIcons name="check-circle" size={24} color={COLORS.success} />
+                    </TouchableOpacity>
+                )}
                 <Pressable
                     onPress={() => handleDeleteBed(item._id)}
                     style={({ pressed }) => [
-                        { padding: 8, opacity: pressed ? 0.5 : 1 },
-                        { cursor: 'pointer' }
+                        styles.deleteButton,
+                        { opacity: pressed ? 0.5 : 1 }
                     ]}
                 >
                     <MaterialCommunityIcons name="delete" size={24} color={COLORS.error} />
