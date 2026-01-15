@@ -22,6 +22,7 @@ export default function RootLayout() {
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="signup" options={{ headerShown: false }} />
           <Stack.Screen name="ambulance/pickup" options={{ headerShown: false }} />
+          <Stack.Screen name="tracking/index" options={{ headerShown: false, presentation: 'modal' }} />
         </Stack>
       </AuthProvider>
       <StatusBar style="auto" />

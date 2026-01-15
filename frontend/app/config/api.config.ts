@@ -301,6 +301,16 @@ export const api = {
         });
     },
 
+    /**
+     * Update bed status (Admin)
+     */
+    updateBedStatus: async (bedId: string, isAvailable: boolean): Promise<Bed> => {
+        return fetchApi<Bed>(`/api/beds/${bedId}/status`, {
+            method: 'PUT',
+            body: JSON.stringify({ isAvailable }),
+        });
+    },
+
     // ==========================================================================
     // 🚑 AMBULANCES
     // ==========================================================================

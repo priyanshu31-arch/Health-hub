@@ -7,6 +7,7 @@ import {
     StyleSheet,
     TouchableOpacity,
     View,
+    Platform,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ThemedText } from '../../components/themed-text';
@@ -29,29 +30,41 @@ export default function ManageBookingsScreen() {
             setBookings(data || []);
         } catch (error) {
             console.error(error);
-            Alert.alert('Error', 'Failed to fetch bookings');
+            if (Platform.OS === 'web') alert('Failed to fetch bookings');
+            else Alert.alert('Error', 'Failed to fetch bookings');
         } finally {
             setLoading(false);
         }
     };
 
     const handleDeleteBooking = async (id: string) => {
-        Alert.alert('Delete Booking', 'Are you sure you want to delete this booking? This will release the bed/ambulance.', [
-            { text: 'Cancel', style: 'cancel' },
-            {
-                text: 'Delete',
-                style: 'destructive',
-                onPress: async () => {
-                    try {
-                        await api.deleteBooking(id);
-                        fetchData();
-                    } catch (error) {
-                        console.error(error);
-                        Alert.alert('Error', 'Failed to delete booking');
-                    }
-                }
+        const deleteAction = async () => {
+            try {
+                await api.deleteBooking(id);
+                fetchData();
+                if (Platform.OS === 'web') alert('Booking removed and resource freed');
+                else Alert.alert('Success', 'Booking removed and resource freed');
+            } catch (error) {
+                console.error(error);
+                if (Platform.OS === 'web') alert('Failed to delete booking');
+                else Alert.alert('Error', 'Failed to delete booking');
             }
-        ]);
+        };
+
+        if (Platform.OS === 'web') {
+            if (window.confirm('Are you sure you want to delete this booking? This will release the bed/ambulance.')) {
+                await deleteAction();
+            }
+        } else {
+            Alert.alert('Delete Booking', 'Are you sure you want to delete this booking? This will release the bed/ambulance.', [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: deleteAction
+                }
+            ]);
+        }
     };
 
     const renderItem = ({ item }: { item: any }) => (
@@ -75,7 +88,7 @@ export default function ManageBookingsScreen() {
                         <TouchableOpacity
                             style={styles.trackBtn}
                             onPress={() => router.push({
-                                pathname: '/tracking/index',
+                                pathname: '/tracking',
                                 params: {
                                     bookingId: item._id,
                                     patientName: item.patientName,

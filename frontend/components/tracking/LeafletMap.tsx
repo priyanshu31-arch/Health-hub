@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import React, { useEffect, useState } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -45,6 +45,41 @@ export default function LeafletMap({
     lat, lon, vehicleNumber, status,
     pickupLat, pickupLon, dropLat, dropLon, dropAddress
 }: MapProps) {
+    const [routePositions, setRoutePositions] = useState<[number, number][]>([]);
+
+    useEffect(() => {
+        // Simple routing: Ambulance -> Pickup -> Drop
+        const fetchRoute = async () => {
+            if (!pickupLat || !pickupLon) return;
+
+            // Coordinates in OSRM are lon,lat
+            const start = `${lon},${lat}`;
+            const pickup = `${pickupLon},${pickupLat}`;
+            let waypoints = `${start};${pickup}`;
+
+            if (dropLat && dropLon) {
+                const drop = `${dropLon},${dropLat}`;
+                waypoints += `;${drop}`;
+            }
+
+            try {
+                const response = await fetch(`https://router.project-osrm.org/route/v1/driving/${waypoints}?overview=full&geometries=geojson`);
+                const data = await response.json();
+
+                if (data.routes && data.routes.length > 0) {
+                    const coords = data.routes[0].geometry.coordinates;
+                    // GeoJSON is [lon, lat], Leaflet needs [lat, lon]
+                    const positions = coords.map((c: number[]) => [c[1], c[0]] as [number, number]);
+                    setRoutePositions(positions);
+                }
+            } catch (error) {
+                console.error("Error fetching route:", error);
+            }
+        };
+
+        fetchRoute();
+    }, [lat, lon, pickupLat, pickupLon, dropLat, dropLon]);
+
     return (
         <MapContainer
             center={[lat, lon]}
@@ -81,6 +116,11 @@ export default function LeafletMap({
                         {dropAddress || 'Hospital'}
                     </Popup>
                 </Marker>
+            )}
+
+            {/* Route Line */}
+            {routePositions.length > 0 && (
+                <Polyline positions={routePositions} pathOptions={{ color: 'blue' }} />
             )}
 
             <RecenterMap lat={lat} lon={lon} />
