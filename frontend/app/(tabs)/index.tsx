@@ -184,10 +184,10 @@ export default function HomeScreen() {
         >
           <View style={styles.quickActionsGrid}>
             {[
-              { id: 'ambulance', name: 'Ambulance', icon: 'ambulance', path: '/ambulance/pickup', color: '#FEF2F2', iconColor: '#EF4444' },
-              { id: 'doctor', name: 'Best Doctor', icon: 'doctor', path: '/doctor', color: '#EFF6FF', iconColor: '#3B82F6' },
-              { id: 'hospitals', name: 'Hospitals', icon: 'hospital-building', path: '/hospitals', color: '#F0FDF4', iconColor: '#22C55E' },
-              { id: 'chat', name: 'AI Chat', icon: 'robot', path: '/chat', color: '#FAF5FF', iconColor: '#A855F7' },
+              { id: 'ambulance', name: 'Emergency', icon: 'ambulance', path: '/ambulance/pickup', color: '#FEF2F2', iconColor: '#EF4444' },
+              { id: 'doctor', name: 'Doctors', icon: 'doctor', path: '/doctor', color: '#ECFEFF', iconColor: '#0891B2' },
+              { id: 'hospitals', name: 'Hospitals', icon: 'hospital-building', path: '/hospitals', color: '#F0FDF4', iconColor: '#10B981' },
+              { id: 'chat', name: 'Health AI', icon: 'robot', path: '/chat', color: '#F5F3FF', iconColor: '#8B5CF6' },
             ].map((item, index) => {
               const scale = useSharedValue(1);
               const animatedStyle = useAnimatedStyle(() => ({
@@ -198,22 +198,16 @@ export default function HomeScreen() {
                 <AnimatedPressable
                   key={item.id}
                   style={[styles.actionItem, animatedStyle]}
-                  onPressIn={() => (scale.value = withSpring(0.9))}
+                  onPressIn={() => (scale.value = withSpring(0.92))}
                   onPressOut={() => (scale.value = withSpring(1))}
                   onPress={() => handlePressAction(item.path)}
                 >
-                  <View style={[styles.actionIconContainer, { backgroundColor: item.color }]}>
-                    <MaterialCommunityIcons name={item.icon as any} size={28} color={item.iconColor} />
-                  </View>
-
-                  {/* Admin Link - Only visible if role is admin */}
-                  {user?.role === 'admin' && item.id === 'hospitals' && (
-                    <Link href="/admin" asChild>
-                      <TouchableOpacity style={{ marginTop: 10, padding: 5, backgroundColor: '#333', borderRadius: 5 }}>
-                        <ThemedText style={{ color: '#fff', fontSize: 10 }}>Admin</ThemedText>
-                      </TouchableOpacity>
-                    </Link>
-                  )}
+                  <LinearGradient
+                    colors={[item.color, '#FFFFFF']}
+                    style={styles.actionIconContainer}
+                  >
+                    <MaterialCommunityIcons name={item.icon as any} size={26} color={item.iconColor} />
+                  </LinearGradient>
 
                   <ThemedText style={styles.actionLabel}>{item.name}</ThemedText>
                 </AnimatedPressable>
