@@ -20,7 +20,7 @@ const AmbulanceTabScreen = () => {
 
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    router.push('/ambulance/pickup');
+    router.push('/ambulance/select-hospital');
   };
 
   return (

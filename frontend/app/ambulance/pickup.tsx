@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -33,10 +33,19 @@ export default function AmbulancePickupScreen() {
     const [contactNumber, setContactNumber] = useState('');
     const [pickupAddress, setPickupAddress] = useState('');
 
+    // Get hospitalId from params
+    const { hospitalId } = useLocalSearchParams();
+
     useEffect(() => {
-        fetchAmbulances();
+        if (hospitalId) {
+            fetchAmbulances();
+        } else {
+            // Fallback or error if arrived here without hospital
+            Alert.alert('Error', 'No hospital selected');
+            router.back();
+        }
         getUserLocation();
-    }, []);
+    }, [hospitalId]);
 
     const getUserLocation = async () => {
         try {
@@ -67,10 +76,9 @@ export default function AmbulancePickupScreen() {
     const fetchAmbulances = async () => {
         try {
             setLoading(true);
-            const data = await api.getAmbulances();
-            // Filter by available only
-            const available = data.filter((a: any) => a.isAvailable);
-            setAmbulances(available);
+            // Pass hospitalId and isAvailable=true
+            const data = await api.getAmbulances(hospitalId as string, true);
+            setAmbulances(data);
         } catch (error) {
             console.error(error);
             Alert.alert('Error', 'Failed to fetch ambulances');
@@ -106,6 +114,7 @@ export default function AmbulancePickupScreen() {
                 pickupLat: bookingLat,
                 pickupLon: bookingLon,
                 hospitalId: selectedAmbulance.hospital._id || selectedAmbulance.hospital,
+                ambulanceId: selectedAmbulance._id, // Pass specific ambulance ID
                 patientName,
                 contactNumber,
                 pickupAddress

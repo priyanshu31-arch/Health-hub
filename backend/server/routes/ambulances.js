@@ -5,12 +5,46 @@ const Hospital = require('../models/Hospital');
 const auth = require('../middleware/auth');
 
 // @route   GET /ambulances
-// @desc    Get all ambulances
+// @desc    Get all ambulances (with optional filters)
 // @access  Public
 router.get('/', async (req, res) => {
   try {
-    const ambulances = await Ambulance.find().populate('hospital', 'name');
+    const { hospital, isAvailable } = req.query;
+    let query = {};
+    if (hospital) query.hospital = hospital;
+    if (isAvailable !== undefined) query.isAvailable = isAvailable === 'true';
+
+    const ambulances = await Ambulance.find(query).populate('hospital', 'name');
     res.json(ambulances);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   PUT /ambulances/:id/status
+// @desc    Update ambulance status
+// @access  Private (Admin/Hospital Owner)
+router.put('/:id/status', auth, async (req, res) => {
+  const { isAvailable } = req.body;
+  try {
+    let ambulance = await Ambulance.findById(req.params.id);
+    if (!ambulance) return res.status(404).json({ msg: 'Ambulance not found' });
+
+    const hospital = await Hospital.findById(ambulance.hospital);
+    if (hospital.user.toString() !== req.user.id) {
+      return res.status(401).json({ msg: 'Not authorized' });
+    }
+
+    ambulance.isAvailable = isAvailable;
+    // Also reset status string if becoming available
+    if (isAvailable) {
+      ambulance.status = 'available';
+      ambulance.user = null; // Clear assigned user
+    }
+
+    await ambulance.save();
+    res.json(ambulance);
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');
