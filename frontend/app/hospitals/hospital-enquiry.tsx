@@ -189,15 +189,6 @@ export default function HospitalEnquiryScreen() {
                                     ]}>
                                         {bed.bedNumber}
                                     </ThemedText>
-                                    <View style={[
-                                        styles.miniCategoryBadge,
-                                        selectedBed === bed._id && { backgroundColor: 'rgba(255,255,255,0.2)' }
-                                    ]}>
-                                        <ThemedText style={[
-                                            styles.miniCategoryText,
-                                            selectedBed === bed._id && styles.selectedText
-                                        ]}>{bed.category || 'General'}</ThemedText>
-                                    </View>
                                 </View>
                             </TouchableOpacity>
                         ))}
@@ -533,18 +524,6 @@ const styles = StyleSheet.create({
     homeButtonText: {
         color: COLORS.white,
         fontSize: 18,
-        fontWeight: 'bold',
-    },
-    miniCategoryBadge: {
-        backgroundColor: COLORS.primaryLight,
-        paddingHorizontal: 6,
-        paddingVertical: 1,
-        borderRadius: 4,
-        marginTop: 2,
-    },
-    miniCategoryText: {
-        fontSize: 8,
-        color: COLORS.primary,
         fontWeight: 'bold',
     },
 });

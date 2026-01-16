@@ -56,13 +56,7 @@ export default function ForgotPasswordScreen() {
             const res = await api.forgotPassword(email);
             console.log('✅ OTP API Response:', res);
 
-            let message = res.msg;
-            // In developer mode, show the OTP in the alert for convenience
-            if (res.otp) {
-                message += `\n\n(Dev OTP: ${res.otp})`;
-            }
-
-            showStatus('success', message);
+            showStatus('success', res.msg);
             setStep('OTP');
         } catch (error: any) {
             console.error('❌ OTP Request Failed:', error);

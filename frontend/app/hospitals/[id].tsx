@@ -16,7 +16,6 @@ interface Bed {
     bedNumber: string;
     isAvailable: boolean;
     hospital: string;
-    category?: string;
 }
 
 interface Ambulance {
@@ -201,9 +200,6 @@ export default function HospitalDetailsScreen() {
                             <View key={bed._id} style={[styles.card, !bed.isAvailable && styles.cardDisabled]}>
                                 <MaterialCommunityIcons name="bed" size={24} color={bed.isAvailable ? COLORS.primary : COLORS.textLight} />
                                 <ThemedText style={styles.cardTitle}>{bed.bedNumber}</ThemedText>
-                                <View style={styles.miniCategoryBadge}>
-                                    <ThemedText style={styles.miniCategoryText}>{bed.category || 'General'}</ThemedText>
-                                </View>
                                 {bed.isAvailable ? (
                                     <TouchableOpacity style={styles.bookButton} onPress={() => handleBookPress(bed, 'bed')}>
                                         <ThemedText style={styles.bookButtonText}>Book</ThemedText>
@@ -684,17 +680,5 @@ const styles = StyleSheet.create({
         color: '#DC2626',
         fontSize: 14,
         flex: 1
-    },
-    miniCategoryBadge: {
-        backgroundColor: COLORS.primaryLight,
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 6,
-        marginBottom: 4,
-    },
-    miniCategoryText: {
-        fontSize: 9,
-        color: COLORS.primary,
-        fontWeight: 'bold',
     },
 });

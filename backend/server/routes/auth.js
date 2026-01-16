@@ -205,13 +205,10 @@ router.post('/forgot-password', async (req, res) => {
 
     await user.save();
 
-    // For development/testing, send the OTP back in the response
-    // In production, this should ONLY be sent via email
-    const isProd = process.env.NODE_ENV === 'production';
+    console.log(`🔐 OTP for ${email}: ${otp}`);
 
     res.json({
-      msg: 'A 6-digit OTP has been generated.',
-      otp: !isProd ? otp : undefined
+      msg: 'A 6-digit OTP has been sent to your email.'
     });
   } catch (err) {
     console.error('🔥 Forgot password error:', err.message);

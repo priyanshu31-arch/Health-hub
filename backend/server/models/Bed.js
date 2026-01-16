@@ -9,11 +9,6 @@ const BedSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
-  category: {
-    type: String,
-    enum: ['General', 'ICU', 'Ventilator', 'Oxygen'],
-    default: 'General',
-  },
   hospital: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Hospital',

@@ -451,7 +451,7 @@ export const api = {
     /**
      * Add a new bed
      */
-    addBed: async (data: { bedNumber: string; isAvailable: boolean; hospital: string; category?: string }): Promise<Bed> => {
+    addBed: async (data: { bedNumber: string; isAvailable: boolean; hospital: string }): Promise<Bed> => {
         return fetchApi<Bed>('/api/beds', {
             method: 'POST',
             body: JSON.stringify(data),

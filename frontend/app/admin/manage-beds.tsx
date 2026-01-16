@@ -24,10 +24,7 @@ export default function ManageBedsScreen() {
     const [loading, setLoading] = useState(true);
     const [modalVisible, setModalVisible] = useState(false);
     const [newBedNumber, setNewBedNumber] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('General');
     const [submitting, setSubmitting] = useState(false);
-
-    const categories = ['General', 'ICU', 'Ventilator', 'Oxygen'];
 
     useEffect(() => {
         fetchData();
@@ -59,7 +56,6 @@ export default function ManageBedsScreen() {
                 bedNumber: newBedNumber,
                 isAvailable: true,
                 hospital: hospital._id,
-                category: selectedCategory
             });
             setModalVisible(false);
             setNewBedNumber('');
@@ -131,9 +127,6 @@ export default function ManageBedsScreen() {
                         <ThemedText style={[styles.statusParams, { color: item.isAvailable ? COLORS.success : COLORS.error }]}>
                             {item.isAvailable ? 'Available' : 'Occupied'}
                         </ThemedText>
-                        <View style={styles.categoryBadge}>
-                            <ThemedText style={styles.categoryBadgeText}>{item.category || 'General'}</ThemedText>
-                        </View>
                     </View>
                 </View>
                 {!item.isAvailable && (
@@ -197,24 +190,6 @@ export default function ManageBedsScreen() {
                             placeholderTextColor={COLORS.textLight}
                         />
 
-                        <ThemedText style={styles.label}>Category</ThemedText>
-                        <View style={styles.categoryContainer}>
-                            {categories.map((cat) => (
-                                <TouchableOpacity
-                                    key={cat}
-                                    style={[
-                                        styles.categoryChip,
-                                        selectedCategory === cat && styles.categoryChipActive
-                                    ]}
-                                    onPress={() => setSelectedCategory(cat)}
-                                >
-                                    <ThemedText style={[
-                                        styles.categoryChipText,
-                                        selectedCategory === cat && styles.categoryChipTextActive
-                                    ]}>{cat}</ThemedText>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
 
                         <View style={styles.modalActions}>
                             <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
@@ -339,47 +314,5 @@ const styles = StyleSheet.create({
     confirmText: {
         fontWeight: 'bold',
         color: '#fff',
-    },
-    label: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: COLORS.text,
-        marginTop: 8,
-    },
-    categoryContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-    },
-    categoryChip: {
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 20,
-        backgroundColor: COLORS.background,
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
-    },
-    categoryChipActive: {
-        backgroundColor: COLORS.primary,
-        borderColor: COLORS.primary,
-    },
-    categoryChipText: {
-        fontSize: 14,
-        color: COLORS.text,
-    },
-    categoryChipTextActive: {
-        color: COLORS.white,
-        fontWeight: 'bold',
-    },
-    categoryBadge: {
-        backgroundColor: COLORS.primaryLight,
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 8,
-    },
-    categoryBadgeText: {
-        fontSize: 10,
-        color: COLORS.primary,
-        fontWeight: 'bold',
     },
 });
