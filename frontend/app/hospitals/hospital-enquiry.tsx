@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { scheduleBookingNotification } from '../../utils/notifications';
 import { useNotifications } from '@/context/NotificationContext';
+import Shimmer from '@/components/Shimmer';
 import Animated, { FadeInDown, FadeInUp, ZoomIn } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
@@ -169,7 +170,13 @@ export default function HospitalEnquiryScreen() {
                 <ThemedText style={styles.subtitle}>Choose from available beds below:</ThemedText>
 
                 {loading ? (
-                    <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 20 }} />
+                    <View style={styles.grid}>
+                        {[1, 2, 3, 4, 5, 6].map((i) => (
+                            <View key={i} style={styles.bedCardSkeleton}>
+                                <Shimmer width="100%" height={100} borderRadius={16} />
+                            </View>
+                        ))}
+                    </View>
                 ) : beds.length === 0 ? (
                     <View style={styles.emptyState}>
                         <MaterialCommunityIcons name="bed-empty" size={48} color={COLORS.textLight} />
@@ -534,5 +541,10 @@ const styles = StyleSheet.create({
         color: COLORS.white,
         fontSize: 18,
         fontWeight: 'bold',
+    },
+    bedCardSkeleton: {
+        width: '30%',
+        marginHorizontal: '1.5%',
+        marginBottom: 12,
     },
 });

@@ -15,6 +15,7 @@ import { api } from '../config/api.config';
 import { useAuth } from '@/context/AuthContext';
 import { useNotifications } from '@/context/NotificationContext';
 import { COLORS, SHADOWS } from '../../constants/theme';
+import Shimmer from '../../components/Shimmer';
 
 const { width } = Dimensions.get('window');
 
@@ -126,6 +127,31 @@ export default function HomeScreen() {
       params: { id: hospital._id, name: hospital.name, location: hospital.location, rating: hospital.rating }
     } as any);
   };
+
+  const DoctorSkeleton = () => (
+    <View style={styles.skeletonDoctorCard}>
+      <Shimmer width="100%" height={120} borderRadius={16} />
+      <View style={{ marginTop: 12 }}>
+        <Shimmer width="80%" height={16} borderRadius={4} />
+        <Shimmer width="60%" height={12} borderRadius={4} style={{ marginTop: 8 }} />
+        <Shimmer width="40%" height={10} borderRadius={4} style={{ marginTop: 8 }} />
+      </View>
+    </View>
+  );
+
+  const HospitalSkeleton = () => (
+    <View style={styles.skeletonHospitalCard}>
+      <Shimmer width="100%" height={140} borderRadius={24} />
+      <View style={{ padding: 16 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+          <Shimmer width="60%" height={18} borderRadius={4} />
+          <Shimmer width="15%" height={18} borderRadius={4} />
+        </View>
+        <Shimmer width="80%" height={14} borderRadius={4} style={{ marginTop: 12 }} />
+        <Shimmer width="100%" height={40} borderRadius={12} style={{ marginTop: 16 }} />
+      </View>
+    </View>
+  );
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false} bounces={true}>
@@ -278,17 +304,21 @@ export default function HomeScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalList}
           >
-            {displayDoctors.map((doctor, index) => (
-              <Animated.View
-                key={doctor.id}
-                entering={FadeInRight.delay(index * 100).duration(600)}
-              >
-                <DoctorCard
-                  doctor={doctor}
-                  onPress={() => handleDoctorPress(doctor)}
-                />
-              </Animated.View>
-            ))}
+            {loading ? (
+              [1, 2, 3].map((_, i) => <DoctorSkeleton key={i} />)
+            ) : (
+              displayDoctors.map((doctor, index) => (
+                <Animated.View
+                  key={doctor.id}
+                  entering={FadeInRight.delay(index * 100).duration(600)}
+                >
+                  <DoctorCard
+                    doctor={doctor}
+                    onPress={() => handleDoctorPress(doctor)}
+                  />
+                </Animated.View>
+              ))
+            )}
           </ScrollView>
           {displayDoctors.length === 0 && (
             <ThemedText style={styles.emptyText}>No doctors found matching "{searchQuery}"</ThemedText>
@@ -303,15 +333,15 @@ export default function HomeScreen() {
               <ThemedText style={styles.seeAllText}>See all</ThemedText>
             </TouchableOpacity>
           </View>
-          {loading ? (
-            <ActivityIndicator color={COLORS.primary} style={{ marginTop: 20 }} />
-          ) : (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalList}
-            >
-              {displayHospitals.map((hospital, index) => (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalList}
+          >
+            {loading ? (
+              [1, 2].map((_, i) => <HospitalSkeleton key={i} />)
+            ) : (
+              displayHospitals.map((hospital, index) => (
                 <Animated.View
                   key={hospital._id}
                   entering={FadeInRight.delay(index * 100).duration(600)}
@@ -321,9 +351,9 @@ export default function HomeScreen() {
                     onPress={() => handleHospitalPress(hospital)}
                   />
                 </Animated.View>
-              ))}
-            </ScrollView>
-          )}
+              ))
+            )}
+          </ScrollView>
           {!loading && displayHospitals.length === 0 && (
             <ThemedText style={styles.emptyText}>No hospitals found matching "{searchQuery}"</ThemedText>
           )}
@@ -541,5 +571,19 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontWeight: '800',
     fontSize: 17,
+  },
+  skeletonDoctorCard: {
+    width: 160,
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    padding: 12,
+    ...SHADOWS.small,
+  },
+  skeletonHospitalCard: {
+    width: 280,
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
+    ...SHADOWS.small,
+    overflow: 'hidden',
   },
 });

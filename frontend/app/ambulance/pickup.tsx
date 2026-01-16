@@ -18,6 +18,7 @@ import { api } from '../config/api.config';
 import * as Location from 'expo-location';
 import StatusModal from '@/components/StatusModal';
 import { useNotifications } from '@/context/NotificationContext';
+import Shimmer from '@/components/Shimmer';
 
 export default function AmbulancePickupScreen() {
     const router = useRouter();
@@ -200,12 +201,26 @@ export default function AmbulancePickupScreen() {
         </View>
     );
 
-    if (loading) {
-        return (
-            <View style={styles.center}>
-                <ActivityIndicator size="large" color={COLORS.primary} />
+    const AmbulanceSkeleton = () => (
+        <View style={styles.container}>
+            <View style={styles.header}>
+                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+                    <MaterialCommunityIcons name="arrow-left" size={24} color={COLORS.text} />
+                </TouchableOpacity>
+                <ThemedText style={styles.headerTitle}>Select Ambulance</ThemedText>
             </View>
-        );
+            <View style={{ padding: 20 }}>
+                {[1, 2, 3].map((i) => (
+                    <View key={i} style={[styles.card, { height: 120 }]}>
+                        <Shimmer width="100%" height="100%" borderRadius={20} />
+                    </View>
+                ))}
+            </View>
+        </View>
+    );
+
+    if (loading) {
+        return <AmbulanceSkeleton />;
     }
 
     return (

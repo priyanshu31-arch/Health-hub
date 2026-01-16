@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ThemedText } from '@/components/themed-text';
 import { COLORS, SHADOWS } from '../../constants/theme';
+import Shimmer from '@/components/Shimmer';
 import Animated, { FadeInDown, FadeInUp, FadeInRight, Layout, ZoomIn } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
@@ -73,6 +74,12 @@ const DoctorTabScreen = ({ navigation }: { navigation: NavigationProp }) => {
   const [selectedFilter, setSelectedFilter] = useState(initialFilter);
   const [searchQuery, setSearchQuery] = useState('');
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 1200);
+    return () => clearTimeout(timer);
+  }, []);
 
   const filters = [
     { name: 'Earliest available any location', icon: 'calendar-clock' },
@@ -157,6 +164,26 @@ const DoctorTabScreen = ({ navigation }: { navigation: NavigationProp }) => {
     </Animated.View>
   );
 
+  const DoctorItemSkeleton = () => (
+    <View style={styles.doctorCard}>
+      <View style={styles.doctorContent}>
+        <Shimmer width={100} height={100} borderRadius={20} />
+        <View style={styles.doctorInfo}>
+          <View style={styles.doctorHeaderRow}>
+            <Shimmer width="60%" height={20} borderRadius={4} />
+            <Shimmer width="15%" height={20} borderRadius={4} />
+          </View>
+          <Shimmer width="40%" height={16} borderRadius={4} style={{ marginTop: 8 }} />
+          <View style={[styles.doctorStats, { marginTop: 12 }]}>
+            <Shimmer width="30%" height={14} borderRadius={4} />
+            <Shimmer width="30%" height={14} borderRadius={4} />
+          </View>
+          <Shimmer width="50%" height={14} borderRadius={4} style={{ marginTop: 8 }} />
+        </View>
+      </View>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -192,16 +219,18 @@ const DoctorTabScreen = ({ navigation }: { navigation: NavigationProp }) => {
       </LinearGradient>
 
       <FlatList
-        data={filteredDoctors}
-        renderItem={renderDoctorItem}
-        keyExtractor={item => item.id}
+        data={(loading ? [1, 2, 3, 4] : filteredDoctors) as any[]}
+        renderItem={({ item, index }) => loading ? <DoctorItemSkeleton /> : renderDoctorItem({ item: item as any, index })}
+        keyExtractor={(item, index) => loading ? `skeleton-${index}` : (item as any).id}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <MaterialCommunityIcons name="magnify-close" size={64} color={COLORS.textLight} />
-            <ThemedText style={styles.emptyStateText}>No specialists found</ThemedText>
-          </View>
+          !loading ? (
+            <View style={styles.emptyState}>
+              <MaterialCommunityIcons name="magnify-close" size={64} color={COLORS.textLight} />
+              <ThemedText style={styles.emptyStateText}>No specialists found</ThemedText>
+            </View>
+          ) : null
         }
       />
 

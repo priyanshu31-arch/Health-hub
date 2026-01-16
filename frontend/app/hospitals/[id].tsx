@@ -11,6 +11,7 @@ import * as Haptics from 'expo-haptics';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { scheduleBookingNotification } from '../../utils/notifications';
 import { useNotifications } from '@/context/NotificationContext';
+import Shimmer from '@/components/Shimmer';
 
 interface Bed {
     _id: string;
@@ -136,12 +137,35 @@ export default function HospitalDetailsScreen() {
         }
     };
 
-    if (loading) {
-        return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={COLORS.primary} />
+    const HospitalDetailSkeleton = () => (
+        <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+            <View style={styles.imageContainer}>
+                <Shimmer width="100%" height={260} borderRadius={0} />
             </View>
-        );
+            <View style={styles.contentContainer}>
+                <View style={styles.statsContainer}>
+                    <Shimmer width="45%" height={60} borderRadius={16} />
+                    <Shimmer width="45%" height={60} borderRadius={16} />
+                </View>
+
+                <View style={[styles.sectionHeader, { marginTop: 24 }]}>
+                    <Shimmer width="40%" height={24} borderRadius={4} />
+                    <Shimmer width="30%" height={16} borderRadius={4} style={{ marginTop: 8 }} />
+                </View>
+
+                <View style={styles.grid}>
+                    {[1, 2, 3, 4].map((i) => (
+                        <View key={i} style={styles.card}>
+                            <Shimmer width="100%" height={100} borderRadius={12} />
+                        </View>
+                    ))}
+                </View>
+            </View>
+        </ScrollView>
+    );
+
+    if (loading) {
+        return <HospitalDetailSkeleton />;
     }
 
     if (!details) {
