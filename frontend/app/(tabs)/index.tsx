@@ -13,6 +13,7 @@ import DoctorCard from '../../components/doctorcard';
 import HospitalCard from '../../components/hospitalcard';
 import { api } from '../config/api.config';
 import { useAuth } from '@/context/AuthContext';
+import { useNotifications } from '@/context/NotificationContext';
 import { COLORS, SHADOWS } from '../../constants/theme';
 
 const { width } = Dimensions.get('window');
@@ -67,6 +68,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const { unreadCount } = useNotifications();
 
   useEffect(() => {
     const fetchHospitals = async () => {
@@ -149,10 +151,13 @@ export default function HomeScreen() {
             {user ? (
               <TouchableOpacity
                 style={styles.notificationCircle}
-                onPress={() => Haptics.selectionAsync()}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  router.push('/notifications');
+                }}
               >
                 <MaterialCommunityIcons name="bell-outline" size={24} color={COLORS.white} />
-                <View style={styles.notificationDot} />
+                {unreadCount > 0 && <View style={styles.notificationDot} />}
               </TouchableOpacity>
             ) : (
               <Link href="/login" asChild>

@@ -19,12 +19,14 @@ import { api } from '../config/api.config';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { scheduleBookingNotification } from '../../utils/notifications';
+import { useNotifications } from '@/context/NotificationContext';
 import Animated, { FadeInDown, FadeInUp, ZoomIn } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
 export default function HospitalEnquiryScreen() {
     const router = useRouter();
     const { user } = useAuth();
+    const { addNotification } = useNotifications();
     const params = useLocalSearchParams();
     const { hospitalId, hospitalName } = params;
 
@@ -117,6 +119,13 @@ export default function HospitalEnquiryScreen() {
 
             // Trigger notification
             await scheduleBookingNotification('Bed Booking', patientName);
+
+            // Add to in-app notification context
+            addNotification(
+                'Booking Confirmed! ✅',
+                `Your bed booking for ${patientName} at ${hospitalName} is confirmed.`,
+                'booking'
+            );
 
             const bedDetails = beds.find(b => b._id === selectedBed);
             const bedInfo = bedDetails ? `Bed ${bedDetails.bedNumber}` : 'Selected Bed';

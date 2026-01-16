@@ -10,6 +10,7 @@ import { api } from '../config/api.config';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { scheduleBookingNotification } from '../../utils/notifications';
+import { useNotifications } from '@/context/NotificationContext';
 
 interface Bed {
     _id: string;
@@ -51,6 +52,7 @@ export default function HospitalDetailsScreen() {
     const [patientName, setPatientName] = useState('');
     const [contactNumber, setContactNumber] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const { addNotification } = useNotifications();
 
     useEffect(() => {
         if (id) {
@@ -110,6 +112,14 @@ export default function HospitalDetailsScreen() {
 
             // Trigger notification
             await scheduleBookingNotification(bookingType === 'bed' ? 'Bed Booking' : 'Ambulance Booking', patientName);
+
+            // Add to in-app notification context
+            const typeLabel = bookingType === 'bed' ? 'Bed' : 'Ambulance';
+            addNotification(
+                'Booking Confirmed! ✅',
+                `Your ${typeLabel} booking for ${patientName} at ${details?.hospital.name} is confirmed.`,
+                'booking'
+            );
 
             setBookingSuccess(true);
             setPatientName('');

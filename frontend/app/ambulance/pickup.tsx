@@ -17,6 +17,7 @@ import { COLORS, SHADOWS } from '../../constants/theme';
 import { api } from '../config/api.config';
 import * as Location from 'expo-location';
 import StatusModal from '@/components/StatusModal';
+import { useNotifications } from '@/context/NotificationContext';
 
 export default function AmbulancePickupScreen() {
     const router = useRouter();
@@ -24,6 +25,7 @@ export default function AmbulancePickupScreen() {
     const [loading, setLoading] = useState(true);
     const [bookingLoading, setBookingLoading] = useState(false);
     const [userLocation, setUserLocation] = useState<{ lat: number; lon: number } | null>(null);
+    const { addNotification } = useNotifications();
 
     // Booking Modal State
     const [modalVisible, setModalVisible] = useState(false);
@@ -123,6 +125,14 @@ export default function AmbulancePickupScreen() {
             const result = await api.bookAmbulance(bookingData);
             setConfirmedBooking(result);
             setBookingSuccess(true);
+
+            // Add to in-app notification context
+            addNotification(
+                'Ambulance Booked! 🚑',
+                `Ambulance ${selectedAmbulance.ambulanceNumber} is on its way for ${patientName}.`,
+                'booking'
+            );
+
             setPatientName('');
             setContactNumber('');
             setPickupAddress('');
