@@ -17,10 +17,11 @@ import { COLORS, SHADOWS } from '../../constants/theme';
 
 const { width } = Dimensions.get('window');
 
-// Hospital images for mapping
 const hospitalImages = [
-  require('@/assets/images/h3.png'),
+  require('@/assets/images/h5.png'),
+  require('@/assets/images/hospital1.png'),
   require('@/assets/images/h4.png'),
+  require('@/assets/images/hospital2.png'),
   require('@/assets/images/h5.png'),
 ];
 
@@ -28,24 +29,24 @@ const hospitalImages = [
 const fallbackDoctors = [
   {
     id: 'd1',
-    name: 'Dr. Srivathsavi Mallik',
-    specialization: 'Orthopedic surgeon',
-    rating: 4.7,
-    image: require('@/assets/images/doctor1.png'),
+    name: 'Dr. Sarah Jenkin',
+    specialization: 'Cardiologist',
+    rating: 4.9,
+    image: require('@/assets/images/doctor_f1.png'),
   },
   {
     id: 'd2',
     name: 'Dr. Michael Thompson',
     specialization: 'Neurosurgeon',
     rating: 4.8,
-    image: require('@/assets/images/doctor2.jpeg'),
+    image: require('@/assets/images/doctor_m1.png'),
   },
   {
     id: 'd3',
-    name: 'Dr. Sarah Jenkin',
-    specialization: 'Cardiologist',
-    rating: 4.9,
-    image: require('@/assets/images/doctor1.png'),
+    name: 'Dr. Srivathsavi Mallik',
+    specialization: 'Orthopedic surgeon',
+    rating: 4.7,
+    image: require('@/assets/images/doctor_m2.png'),
   },
 ];
 
@@ -91,7 +92,7 @@ export default function HomeScreen() {
       name: h.name,
       location: h.bio || 'Location not available',
       rating: h.rating || 4.5,
-      image: h.photo ? { uri: h.photo } : hospitalImages[index % hospitalImages.length],
+      image: hospitalImages[index % hospitalImages.length],
     }))
     : [
       { _id: '1', name: 'Patel Orthopaedic', location: 'Seattle, WA', rating: 4.6, image: hospitalImages[0] },

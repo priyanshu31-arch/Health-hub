@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    Modal,
     ScrollView,
     StyleSheet,
     TextInput,
@@ -17,6 +18,9 @@ import { COLORS, SHADOWS } from '../../constants/theme';
 import { api } from '../config/api.config';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
+import { scheduleBookingNotification } from '../../utils/notifications';
+import Animated, { FadeInDown, FadeInUp, ZoomIn } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 
 export default function HospitalEnquiryScreen() {
     const router = useRouter();
@@ -30,6 +34,17 @@ export default function HospitalEnquiryScreen() {
     const [patientName, setPatientName] = useState('');
     const [contactNumber, setContactNumber] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [bookedInfo, setBookedInfo] = useState<{ bed: string; patient: string; contact: string } | null>(null);
+
+    useEffect(() => {
+        if (user?.phone) {
+            setContactNumber(user.phone);
+        }
+        if (user?.name) {
+            setPatientName(user.name);
+        }
+    }, [user]);
 
     useEffect(() => {
         if (hospitalId) {
@@ -75,6 +90,21 @@ export default function HospitalEnquiryScreen() {
             return;
         }
 
+        // Realistic phone number validation (10 digits, starts with 6-9)
+        const phoneRegex = /^[6-9]\d{9}$/;
+        if (contactNumber.length < 10) {
+            Alert.alert('Invalid Contact Number', 'Contact number must be exactly 10 digits.');
+            return;
+        }
+        if (!phoneRegex.test(contactNumber)) {
+            Alert.alert(
+                'Invalid Contact Number',
+                'Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.'
+            );
+            return;
+        }
+
+
         try {
             setSubmitting(true);
             await api.bookBed({
@@ -85,21 +115,20 @@ export default function HospitalEnquiryScreen() {
                 contactNumber
             });
 
+            // Trigger notification
+            await scheduleBookingNotification('Bed Booking', patientName);
+
             const bedDetails = beds.find(b => b._id === selectedBed);
             const bedInfo = bedDetails ? `Bed ${bedDetails.bedNumber}` : 'Selected Bed';
 
-            Alert.alert(
-                'Booking Confirmed!',
-                `Successfully booked ${bedInfo} for ${patientName}.\n\n` +
-                `Please arrive at ${hospitalName || 'the hospital'} within 2 hours.\n` +
-                `A confirmation has been logged for contact: ${contactNumber}`,
-                [
-                    {
-                        text: 'Return to Home',
-                        onPress: () => router.replace('/(tabs)'),
-                    },
-                ]
-            );
+            setBookedInfo({
+                bed: bedInfo,
+                patient: patientName,
+                contact: contactNumber
+            });
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            setShowSuccessModal(true);
+
         } catch (error: any) {
             console.error(error);
             Alert.alert('Booking Failed', error.message || 'Could not complete booking.');
@@ -153,12 +182,23 @@ export default function HospitalEnquiryScreen() {
                                     size={32}
                                     color={selectedBed === bed._id ? COLORS.white : COLORS.primary}
                                 />
-                                <ThemedText style={[
-                                    styles.bedNumber,
-                                    selectedBed === bed._id && styles.selectedText
-                                ]}>
-                                    {bed.bedNumber}
-                                </ThemedText>
+                                <View style={{ alignItems: 'center' }}>
+                                    <ThemedText style={[
+                                        styles.bedNumber,
+                                        selectedBed === bed._id && styles.selectedText
+                                    ]}>
+                                        {bed.bedNumber}
+                                    </ThemedText>
+                                    <View style={[
+                                        styles.miniCategoryBadge,
+                                        selectedBed === bed._id && { backgroundColor: 'rgba(255,255,255,0.2)' }
+                                    ]}>
+                                        <ThemedText style={[
+                                            styles.miniCategoryText,
+                                            selectedBed === bed._id && styles.selectedText
+                                        ]}>{bed.category || 'General'}</ThemedText>
+                                    </View>
+                                </View>
                             </TouchableOpacity>
                         ))}
                     </View>
@@ -210,7 +250,72 @@ export default function HospitalEnquiryScreen() {
                     )}
                 </TouchableOpacity>
             </View>
+
+            {/* Success Modal */}
+            <Modal
+                visible={showSuccessModal}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setShowSuccessModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <Animated.View
+                        entering={ZoomIn.duration(500)}
+                        style={styles.modalContent}
+                    >
+                        <LinearGradient
+                            colors={[COLORS.primary, '#0ea5e9']}
+                            style={styles.successIconContainer}
+                        >
+                            <MaterialCommunityIcons name="check-bold" size={48} color={COLORS.white} />
+                        </LinearGradient>
+
+                        <Animated.View entering={FadeInDown.delay(200).duration(500)} style={{ alignItems: 'center' }}>
+                            <ThemedText style={styles.successTitle}>Booking Confirmed!</ThemedText>
+                            <ThemedText style={styles.successSubtitle}>
+                                Your bed has been successfully reserved.
+                            </ThemedText>
+                        </Animated.View>
+
+                        <Animated.View entering={FadeInUp.delay(400).duration(500)} style={styles.detailsCard}>
+                            <View style={styles.detailRow}>
+                                <ThemedText style={styles.detailLabel}>Patient</ThemedText>
+                                <ThemedText style={styles.detailValue}>{bookedInfo?.patient}</ThemedText>
+                            </View>
+                            <View style={styles.detailRow}>
+                                <ThemedText style={styles.detailLabel}>Bed</ThemedText>
+                                <ThemedText style={styles.detailValue}>{bookedInfo?.bed}</ThemedText>
+                            </View>
+                            <View style={styles.detailRow}>
+                                <ThemedText style={styles.detailLabel}>Contact</ThemedText>
+                                <ThemedText style={styles.detailValue}>+91 {bookedInfo?.contact}</ThemedText>
+                            </View>
+                            <View style={styles.detailRow}>
+                                <ThemedText style={styles.detailLabel}>Hospital</ThemedText>
+                                <ThemedText style={styles.detailValue}>{hospitalName}</ThemedText>
+                            </View>
+                        </Animated.View>
+
+                        <Animated.View entering={FadeInUp.delay(600).duration(500)}>
+                            <ThemedText style={styles.arrivalNote}>
+                                Please arrive at the hospital within 2 hours to complete the admission process.
+                            </ThemedText>
+
+                            <TouchableOpacity
+                                style={styles.homeButton}
+                                onPress={() => {
+                                    setShowSuccessModal(false);
+                                    router.replace('/(tabs)');
+                                }}
+                            >
+                                <ThemedText style={styles.homeButtonText}>Return to Home</ThemedText>
+                            </TouchableOpacity>
+                        </Animated.View>
+                    </Animated.View>
+                </View>
+            </Modal>
         </SafeAreaView>
+
     );
 }
 
@@ -349,5 +454,97 @@ const styles = StyleSheet.create({
         fontSize: 16,
         borderWidth: 1,
         borderColor: '#E2E8F0',
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    modalContent: {
+        backgroundColor: COLORS.white,
+        borderRadius: 30,
+        padding: 30,
+        width: '100%',
+        maxWidth: 400,
+        alignItems: 'center',
+        ...SHADOWS.medium,
+    },
+    successIconContainer: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 20,
+        ...SHADOWS.medium,
+    },
+    successTitle: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: COLORS.text,
+        marginBottom: 8,
+    },
+    successSubtitle: {
+        fontSize: 16,
+        color: COLORS.textLight,
+        textAlign: 'center',
+        marginBottom: 24,
+    },
+    detailsCard: {
+        width: '100%',
+        backgroundColor: COLORS.background,
+        borderRadius: 20,
+        padding: 20,
+        marginBottom: 24,
+        gap: 12,
+    },
+    detailRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    detailLabel: {
+        fontSize: 14,
+        color: COLORS.textLight,
+    },
+    detailValue: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: COLORS.text,
+    },
+    arrivalNote: {
+        fontSize: 14,
+        color: COLORS.textLight,
+        textAlign: 'center',
+        lineHeight: 20,
+        marginBottom: 30,
+        fontStyle: 'italic',
+    },
+    homeButton: {
+        backgroundColor: COLORS.primary,
+        width: '100%',
+        paddingVertical: 18,
+        borderRadius: 16,
+        alignItems: 'center',
+        ...SHADOWS.small,
+    },
+    homeButtonText: {
+        color: COLORS.white,
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    miniCategoryBadge: {
+        backgroundColor: COLORS.primaryLight,
+        paddingHorizontal: 6,
+        paddingVertical: 1,
+        borderRadius: 4,
+        marginTop: 2,
+    },
+    miniCategoryText: {
+        fontSize: 8,
+        color: COLORS.primary,
+        fontWeight: 'bold',
     },
 });

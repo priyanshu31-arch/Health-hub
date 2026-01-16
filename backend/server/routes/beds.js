@@ -21,7 +21,7 @@ router.get('/', async (req, res) => {
 // @desc    Add a new bed
 // @access  Private
 router.post('/', auth, async (req, res) => {
-  const { bedNumber, isAvailable, hospital } = req.body;
+  const { bedNumber, isAvailable, hospital, category } = req.body;
 
   try {
     const hospitalToUpdate = await Hospital.findById(hospital);
@@ -38,6 +38,7 @@ router.post('/', auth, async (req, res) => {
       bedNumber,
       isAvailable,
       hospital,
+      category: category || 'General',
     });
 
     const bed = await newBed.save();

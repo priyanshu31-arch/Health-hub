@@ -16,6 +16,8 @@ import {
 import { COLORS, SHADOWS } from '../../constants/theme';
 import * as ImagePicker from 'expo-image-picker';
 import { api, API_BASE_URL } from '@/app/config/api.config';
+import { ThemedText } from '@/components/themed-text';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
@@ -69,6 +71,51 @@ export default function ProfileScreen() {
   const handlePaymentMethods = () => {
     Alert.alert('Payment Methods', 'Payment management coming soon!');
   };
+
+  if (!user) {
+    return (
+      <View style={styles.lockedContainer}>
+        <View style={styles.lockedContent}>
+          <LinearGradient
+            colors={[COLORS.primary + '20', COLORS.primary + '05']}
+            style={styles.lockIconCircle}
+          >
+            <MaterialCommunityIcons name="account-lock-outline" size={80} color={COLORS.primary} />
+          </LinearGradient>
+
+          <ThemedText style={styles.lockedTitle}>Profile Locked</ThemedText>
+          <ThemedText style={styles.lockedSubtitle}>
+            Please log in to view your profile, manage bookings, and access medical history.
+          </ThemedText>
+
+          <TouchableOpacity
+            style={styles.loginBtn}
+            onPress={() => router.push('/login')}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={[COLORS.primary, '#0ea5e9']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.loginGradient}
+            >
+              <MaterialCommunityIcons name="login" size={24} color="#FFF" />
+              <Text style={styles.loginBtnText}>Login Now</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => router.push('/signup')}
+            style={styles.signupLink}
+          >
+            <Text style={styles.signupText}>
+              Don't have an account? <Text style={styles.signupHighlight}>Sign Up</Text>
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <>
@@ -586,5 +633,74 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontWeight: '700',
     fontSize: 15,
+  },
+
+  /* Locked State Styles */
+  lockedContainer: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  lockedContent: {
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    padding: 40,
+    borderRadius: 32,
+    ...SHADOWS.medium,
+  },
+  lockIconCircle: {
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  lockedTitle: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: COLORS.text,
+    marginBottom: 12,
+  },
+  lockedSubtitle: {
+    fontSize: 16,
+    color: COLORS.textLight,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 40,
+  },
+  loginBtn: {
+    width: '100%',
+    borderRadius: 20,
+    overflow: 'hidden',
+    ...SHADOWS.medium,
+  },
+  loginGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    gap: 12,
+  },
+  loginBtnText: {
+    color: COLORS.white,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  signupLink: {
+    marginTop: 24,
+    padding: 10,
+  },
+  signupText: {
+    fontSize: 15,
+    color: COLORS.textLight,
+  },
+  signupHighlight: {
+    color: COLORS.primary,
+    fontWeight: '800',
   },
 });

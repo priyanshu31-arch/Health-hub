@@ -13,7 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // Development Configuration
 const DEV_CONFIG = {
     // For Web & iOS Simulator
-    WEB_URL: 'http://127.0.0.1:5000',
+    WEB_URL: 'http://localhost:5000',
     // For Android Emulator
     ANDROID_EMULATOR_URL: 'http://10.0.2.2:5000',
     // For Physical Device - Replace with your computer's IP
@@ -256,6 +256,39 @@ export const api = {
     },
 
     /**
+     * Request a password reset OTP
+     */
+    forgotPassword: async (email: string): Promise<{ msg: string; otp?: string }> => {
+        return fetchApi('/api/auth/forgot-password', {
+            method: 'POST',
+            body: JSON.stringify({ email }),
+            authenticated: false,
+        });
+    },
+
+    /**
+     * Verify the OTP sent to email
+     */
+    verifyOTP: async (email: string, otp: string): Promise<{ msg: string }> => {
+        return fetchApi('/api/auth/verify-otp', {
+            method: 'POST',
+            body: JSON.stringify({ email, otp }),
+            authenticated: false,
+        });
+    },
+
+    /**
+     * Reset password using OTP
+     */
+    resetPassword: async (data: { email: string; otp: string; newPassword: string }): Promise<{ msg: string }> => {
+        return fetchApi('/api/auth/reset-password', {
+            method: 'POST',
+            body: JSON.stringify(data),
+            authenticated: false,
+        });
+    },
+
+    /**
      * Logout - clear token
      */
     logout: (): void => {
@@ -418,7 +451,7 @@ export const api = {
     /**
      * Add a new bed
      */
-    addBed: async (data: { bedNumber: string; isAvailable: boolean; hospital: string }): Promise<Bed> => {
+    addBed: async (data: { bedNumber: string; isAvailable: boolean; hospital: string; category?: string }): Promise<Bed> => {
         return fetchApi<Bed>('/api/beds', {
             method: 'POST',
             body: JSON.stringify(data),

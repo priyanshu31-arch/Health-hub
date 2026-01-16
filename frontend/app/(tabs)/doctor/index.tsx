@@ -1,15 +1,20 @@
-import DoctorFilterScreen from '@/components/doctor/doctor-filter-screen';
+import DoctorTabScreen from '@/components/doctor/doctor-filter-screen';
 import { useRouter } from 'expo-router';
 
 export default function DoctorFilterRoute() {
     const router = useRouter();
 
     const mockNavigation = {
-        navigate: (screen: string) => {
-            if (screen === 'DoctorInfo') router.push('/doctor/some-id' as any);
+        navigate: (screen: string, params?: any) => {
+            if (screen === 'DoctorInfo') {
+                router.push({
+                    pathname: '/doctor/[id]',
+                    params: params
+                } as any);
+            }
         },
         goBack: () => router.back(),
     };
 
-    return <DoctorFilterScreen navigation={mockNavigation as any} />;
+    return <DoctorTabScreen navigation={mockNavigation as any} />;
 }

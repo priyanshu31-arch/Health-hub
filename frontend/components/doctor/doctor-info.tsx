@@ -25,7 +25,7 @@ const DoctorInfoScreen = ({ navigation, doctorData }: { navigation: NavigationPr
     rating: doctorData?.rating || '4.9',
     patients: '2.5k+',
     exp: '12yrs',
-    image: doctorData?.image || 'https://www.woodlandshospital.in/images/doctor-img/Sushovan-Chowdhury.jpg'
+    image: doctorData?.image || require('../../assets/images/doctor_f1.png')
   };
 
   const dates = [

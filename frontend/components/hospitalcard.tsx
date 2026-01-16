@@ -80,12 +80,6 @@ export default function HospitalCard({ hospital, onPress }: HospitalCardProps) {
               <ThemedText style={styles.statText}>30+ Doctors</ThemedText>
             </View>
           </View>
-
-          {/* View Details Button */}
-          <TouchableOpacity style={styles.viewButton}>
-            <ThemedText style={styles.viewButtonText}>View Details</ThemedText>
-            <MaterialCommunityIcons name="arrow-right" size={16} color={COLORS.primary} />
-          </TouchableOpacity>
         </View>
       </TouchableOpacity>
     </Animated.View>
@@ -209,21 +203,5 @@ const styles = StyleSheet.create({
     height: 20,
     backgroundColor: COLORS.primary + '40',
     marginHorizontal: 8,
-  },
-  viewButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.white,
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-    paddingVertical: 10,
-    borderRadius: 12,
-    gap: 6,
-  },
-  viewButtonText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.primary,
   },
 });

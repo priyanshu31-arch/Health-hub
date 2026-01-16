@@ -207,7 +207,10 @@ export default function EditProfile() {
           <TextInput
             style={styles.input}
             value={name}
-            onChangeText={setName}
+            onChangeText={(text) => {
+              const lettersOnly = text.replace(/[^A-Za-z\s]/g, '');
+              setName(lettersOnly);
+            }}
             placeholder="Your Name"
             placeholderTextColor="#999"
           />

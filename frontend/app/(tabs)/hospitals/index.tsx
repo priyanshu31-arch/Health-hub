@@ -20,10 +20,12 @@ import { COLORS, SHADOWS } from '../../../constants/theme';
 import Animated, { FadeInDown, FadeInUp, withSpring, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
-// Hospital images for mapping
+// Verified local hospital images
 const hospitalImages = [
-    require('@/assets/images/h3.png'),
+    require('@/assets/images/h5.png'),
+    require('@/assets/images/hospital1.png'),
     require('@/assets/images/h4.png'),
+    require('@/assets/images/hospital2.png'),
     require('@/assets/images/h5.png'),
 ];
 
@@ -221,7 +223,7 @@ export default function HospitalScreen() {
                             name={hospital.name}
                             location={hospital.bio || 'Location not available'}
                             rating={hospital.rating?.toString() || '4.5'}
-                            image={hospital.photo ? { uri: hospital.photo } : hospitalImages[index % hospitalImages.length]}
+                            image={hospitalImages[index % hospitalImages.length]}
                         />
                     ))
                 )}

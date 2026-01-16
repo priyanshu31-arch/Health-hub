@@ -14,5 +14,5 @@ export default function DoctorInfoRoute() {
         goBack: () => router.back(),
     };
 
-    return <DoctorInfoScreen navigation={mockNavigation as any} />;
+    return <DoctorInfoScreen navigation={mockNavigation as any} doctorData={{ id, name, specialization, rating, image }} />;
 }

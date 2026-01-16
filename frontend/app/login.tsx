@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Text, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, StyleSheet, Text, SafeAreaView, KeyboardAvoidingView, Platform, ImageBackground } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import AuthForm from '@/components/AuthForm';
@@ -58,39 +58,46 @@ export default function LoginScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
-            <LinearGradient
-                colors={[COLORS.gradient1, COLORS.gradient2, COLORS.gradient3]}
-                style={styles.gradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+            <ImageBackground
+                source={require('../assets/images/medical_auth_bg.png')}
+                style={styles.backgroundImage}
+                resizeMode="cover"
             >
-                <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                    style={styles.keyboardView}
+                <LinearGradient
+                    colors={['rgba(8, 145, 178, 0.7)', 'rgba(14, 116, 144, 0.85)', 'rgba(15, 23, 42, 0.9)']}
+                    style={styles.gradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
                 >
-                    <View style={styles.content}>
-                        <Animated.View
-                            entering={FadeInDown.delay(200).duration(1000).springify()}
-                            style={styles.header}
-                        >
-                            <Text style={styles.brand}>HealthBridge</Text>
-                            <Text style={styles.subtitle}>Your Health, Our Priority</Text>
-                        </Animated.View>
 
-                        <Animated.View
-                            entering={FadeInUp.delay(400).duration(1000).springify()}
-                            style={styles.card}
-                        >
-                            <AuthForm
-                                type="login"
-                                onSubmit={handleLogin}
-                                isLoading={isLoading}
-                                onToggle={() => router.push('/signup')}
-                            />
-                        </Animated.View>
-                    </View>
-                </KeyboardAvoidingView>
-            </LinearGradient>
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                        style={styles.keyboardView}
+                    >
+                        <View style={styles.content}>
+                            <Animated.View
+                                entering={FadeInDown.delay(200).duration(1000).springify()}
+                                style={styles.header}
+                            >
+                                <Text style={styles.brand}>HealthBridge</Text>
+                                <Text style={styles.subtitle}>Your Health, Our Priority</Text>
+                            </Animated.View>
+
+                            <Animated.View
+                                entering={FadeInUp.delay(400).duration(1000).springify()}
+                                style={styles.card}
+                            >
+                                <AuthForm
+                                    type="login"
+                                    onSubmit={handleLogin}
+                                    isLoading={isLoading}
+                                    onToggle={() => router.push('/signup')}
+                                />
+                            </Animated.View>
+                        </View>
+                    </KeyboardAvoidingView>
+                </LinearGradient>
+            </ImageBackground>
 
             <StatusModal
                 visible={modalVisible}
@@ -108,8 +115,14 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
+    backgroundImage: {
+        flex: 1,
+        width: '100%',
+        height: '100%',
+    },
     gradient: {
         flex: 1,
+        paddingHorizontal: 20,
     },
     keyboardView: {
         flex: 1,

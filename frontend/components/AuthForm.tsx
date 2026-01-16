@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Switch, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
 
 interface AuthFormProps {
     type: 'login' | 'signup';
@@ -9,6 +10,7 @@ interface AuthFormProps {
 }
 
 export default function AuthForm({ type, onSubmit, isLoading, onToggle }: AuthFormProps) {
+    const router = useRouter();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [name, setName] = useState('');
@@ -16,6 +18,35 @@ export default function AuthForm({ type, onSubmit, isLoading, onToggle }: AuthFo
     const [hospitalName, setHospitalName] = useState('');
 
     const handleSubmit = () => {
+        // Validation logic
+        if (type === 'signup') {
+            if (!name.trim()) {
+                Alert.alert('Validation Error', 'Please enter your full name.');
+                return;
+            }
+            if (isHospital && !hospitalName.trim()) {
+                Alert.alert('Validation Error', 'Please enter the hospital name.');
+                return;
+            }
+        }
+
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!email.trim() || !emailRegex.test(email)) {
+            Alert.alert('Invalid Email', 'Please enter a valid email address with an @ symbol (e.g., example@domain.com).');
+            return;
+        }
+
+        // Password validation
+        if (password.length < 6) {
+            Alert.alert('Weak Password', 'Password must be at least 6 characters long.');
+            return;
+        }
+        if (password.length > 16) {
+            Alert.alert('Password Too Long', 'Password cannot exceed 16 characters.');
+            return;
+        }
+
         onSubmit({
             email,
             password,
@@ -45,7 +76,13 @@ export default function AuthForm({ type, onSubmit, isLoading, onToggle }: AuthFo
                         style={styles.input}
                         placeholder={isHospital ? "Admin Name" : "Full Name"}
                         value={name}
-                        onChangeText={setName}
+                        onChangeText={(text) => {
+                            const lettersOnly = text.replace(/[^A-Za-z\s]/g, '');
+                            if (text !== lettersOnly) {
+                                // Optional: You could show a small toast or just ignore the number
+                            }
+                            setName(lettersOnly);
+                        }}
                         autoCapitalize="words"
                     />
 
@@ -54,7 +91,14 @@ export default function AuthForm({ type, onSubmit, isLoading, onToggle }: AuthFo
                             style={styles.input}
                             placeholder="Hospital Name"
                             value={hospitalName}
-                            onChangeText={setHospitalName}
+                            onChangeText={(text) => {
+                                // For hospital name, maybe numbers are allowed? 
+                                // But user said "no user can write miss information like number in name box"
+                                // Let's restrict it to letters, spaces, and maybe some basics if it's a hospital
+                                // Actually, let's keep it consistent with user's request: no numbers.
+                                const filtered = text.replace(/[0-9]/g, '');
+                                setHospitalName(filtered);
+                            }}
                             autoCapitalize="words"
                         />
                     )}
@@ -75,15 +119,24 @@ export default function AuthForm({ type, onSubmit, isLoading, onToggle }: AuthFo
                 placeholder="Password"
                 value={password}
                 onChangeText={(text) => {
-                    if (text.length <= 15) {
+                    if (text.length <= 16) {
                         setPassword(text);
                     } else {
-                        Alert.alert('Limit Reached', 'Password cannot exceed 15 characters');
+                        Alert.alert('Limit Reached', 'Password cannot exceed 16 characters');
                     }
                 }}
                 secureTextEntry
-                maxLength={15}
+                maxLength={16}
             />
+
+            {type === 'login' && (
+                <TouchableOpacity
+                    onPress={() => router.push('/forgot-password')}
+                    style={styles.forgotPasswordContainer}
+                >
+                    <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                </TouchableOpacity>
+            )}
 
             <TouchableOpacity
                 style={[styles.button, isHospital && type === 'signup' ? styles.adminButton : null]}
@@ -170,5 +223,15 @@ const styles = StyleSheet.create({
     switchLabel: {
         fontSize: 16,
         color: '#333',
+    },
+    forgotPasswordContainer: {
+        alignSelf: 'flex-end',
+        marginBottom: 15,
+        marginTop: -5,
+    },
+    forgotPasswordText: {
+        color: '#007AFF',
+        fontSize: 14,
+        fontWeight: '600',
     },
 });

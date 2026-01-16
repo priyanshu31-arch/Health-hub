@@ -1,313 +1,489 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, TextInput, TouchableOpacity, ScrollView, Platform, Dimensions } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, StyleSheet, TextInput, TouchableOpacity, ScrollView, Platform, Dimensions, FlatList, Modal } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ThemedText } from '@/components/themed-text';
 import { COLORS, SHADOWS } from '../../constants/theme';
-import Animated, { FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeInUp, FadeInRight, Layout, ZoomIn } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { Image } from 'expo-image';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 type NavigationProp = {
-  navigate: (screen: string) => void;
+  navigate: (screen: string, params?: any) => void;
   goBack: () => void;
 };
 
-const DoctorFilterScreen = ({ navigation }: { navigation: NavigationProp }) => {
+const DUMMY_DOCTORS = [
+  {
+    id: 'd1',
+    name: 'Dr. Sarah Jenkin',
+    specialization: 'Cardiologist',
+    rating: 4.9,
+    experience: '12 years',
+    fees: 800,
+    image: require('../../assets/images/doctor_f1.png'),
+    availability: 'Available Today'
+  },
+  {
+    id: 'd2',
+    name: 'Dr. Michael Thompson',
+    specialization: 'Neurosurgeon',
+    rating: 4.8,
+    experience: '15 years',
+    fees: 1200,
+    image: require('../../assets/images/doctor_m1.png'),
+    availability: 'Tomorrow'
+  },
+  {
+    id: 'd3',
+    name: 'Dr. Srivathsavi Mallik',
+    specialization: 'Orthopedic surgeon',
+    rating: 4.7,
+    experience: '8 years',
+    fees: 600,
+    image: require('../../assets/images/doctor_m2.png'),
+    availability: 'Available Today'
+  },
+  {
+    id: 'd4',
+    name: 'Dr. Neha Viswanathan',
+    specialization: 'Cardiovascular Technologist',
+    rating: 4.9,
+    experience: '10 years',
+    fees: 500,
+    image: require('../../assets/images/doctor_f2.png'),
+    availability: 'Available Today'
+  },
+  {
+    id: 'd5',
+    name: 'Dr. James Wilson',
+    specialization: 'Pediatrician',
+    rating: 4.6,
+    experience: '6 years',
+    fees: 400,
+    image: require('../../assets/images/doctor_m1.png'),
+    availability: 'Thursday'
+  }
+];
+
+const DoctorTabScreen = ({ navigation }: { navigation: NavigationProp }) => {
   const initialFilter = 'Earliest available any location';
   const [selectedFilter, setSelectedFilter] = useState(initialFilter);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
 
   const filters = [
     { name: 'Earliest available any location', icon: 'calendar-clock' },
     { name: 'Nearest first', icon: 'map-marker' },
     { name: 'Most experienced', icon: 'trophy' },
-    { name: 'Doctor fees - high to low', icon: 'sort-ascending' },
-    { name: 'Doctor fees - low to high', icon: 'sort-descending' },
-    { name: 'Specialization', icon: 'star' },
+    { name: 'Fees: High to Low', icon: 'sort-ascending' },
+    { name: 'Fees: Low to High', icon: 'sort-descending' },
   ];
+
+  const filteredDoctors = useMemo(() => {
+    let result = [...DUMMY_DOCTORS];
+
+    // Search filter
+    if (searchQuery) {
+      result = result.filter(d =>
+        d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.specialization.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Sort filter
+    if (selectedFilter === 'Most experienced') {
+      result.sort((a, b) => parseInt(b.experience) - parseInt(a.experience));
+    } else if (selectedFilter === 'Fees: High to Low') {
+      result.sort((a, b) => b.fees - a.fees);
+    } else if (selectedFilter === 'Fees: Low to High') {
+      result.sort((a, b) => a.fees - b.fees);
+    }
+
+    return result;
+  }, [searchQuery, selectedFilter]);
+
+  const renderDoctorItem = ({ item, index }: { item: typeof DUMMY_DOCTORS[0], index: number }) => (
+    <Animated.View
+      entering={FadeInDown.delay(index * 100).duration(600)}
+      style={styles.doctorCard}
+    >
+      <TouchableOpacity
+        style={styles.doctorContent}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          navigation.navigate('DoctorInfo', {
+            id: item.id,
+            name: item.name,
+            specialization: item.specialization,
+            rating: item.rating,
+            image: item.image
+          });
+        }}
+        activeOpacity={0.9}
+      >
+        <Image source={item.image} style={styles.doctorImage} />
+        <View style={styles.doctorInfo}>
+          <View style={styles.doctorHeaderRow}>
+            <ThemedText style={styles.doctorName}>{item.name}</ThemedText>
+            <View style={styles.ratingBox}>
+              <MaterialCommunityIcons name="star" size={14} color="#FFB800" />
+              <ThemedText style={styles.ratingText}>{item.rating}</ThemedText>
+            </View>
+          </View>
+          <ThemedText style={styles.specialtyText}>{item.specialization}</ThemedText>
+
+          <View style={styles.doctorStats}>
+            <View style={styles.statLine}>
+              <MaterialCommunityIcons name="briefcase-variant-outline" size={14} color={COLORS.textLight} />
+              <ThemedText style={styles.statText}>{item.experience} exp.</ThemedText>
+            </View>
+            <View style={styles.statLine}>
+              <MaterialCommunityIcons name="currency-inr" size={14} color={COLORS.primary} />
+              <ThemedText style={styles.feeText}>₹{item.fees}</ThemedText>
+            </View>
+          </View>
+
+          <View style={styles.availabilityBadge}>
+            <View style={[styles.dot, { backgroundColor: item.availability === 'Available Today' ? COLORS.success : COLORS.warning }]} />
+            <ThemedText style={[styles.availabilityText, { color: item.availability === 'Available Today' ? COLORS.success : COLORS.warning }]}>
+              {item.availability}
+            </ThemedText>
+          </View>
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
+  );
 
   return (
     <View style={styles.container}>
-      {/* Premium Header */}
-      <Animated.View entering={FadeInUp.duration(600)} style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <MaterialCommunityIcons name="chevron-left" size={28} color={COLORS.text} />
-        </TouchableOpacity>
-        <ThemedText style={styles.headerTitle}>Find Doctor</ThemedText>
-        <View style={{ width: 44 }} />
-      </Animated.View>
+      <LinearGradient
+        colors={[COLORS.primary, '#0ea5e9']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.premiumHeader}
+      >
+        <ThemedText style={styles.premiumHeaderTitle}>Specialists</ThemedText>
+        <ThemedText style={styles.premiumHeaderSubtitle}>Find the best care for you</ThemedText>
 
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {/* Search */}
-        <View style={styles.searchContainer}>
-          <View style={styles.searchBox}>
-            <MaterialCommunityIcons name="magnify" size={22} color={COLORS.textLight} />
+        <View style={styles.searchRow}>
+          <View style={styles.premiumSearchBox}>
+            <MaterialCommunityIcons name="magnify" size={24} color={COLORS.textLight} />
             <TextInput
-              style={styles.searchInput}
-              placeholder="Search specialization or doctor..."
+              style={styles.premiumSearchInput}
+              placeholder="Search specialists..."
               placeholderTextColor={COLORS.textLight}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
             />
           </View>
-        </View>
-
-        {/* Promo Banner */}
-        <Animated.View entering={FadeInDown.delay(200).duration(800)}>
-          <LinearGradient
-            colors={['#1E293B', '#0F172A']}
-            style={styles.banner}
+          <TouchableOpacity
+            style={styles.filterIconButton}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              setIsFilterModalVisible(true);
+            }}
           >
-            <View>
-              <ThemedText style={styles.bannerTitle}>Consultation Available</ThemedText>
-              <ThemedText style={styles.bannerSubtitle}>Book verified specialists today</ThemedText>
+            <MaterialCommunityIcons name="tune" size={24} color={COLORS.white} />
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
+
+      <FlatList
+        data={filteredDoctors}
+        renderItem={renderDoctorItem}
+        keyExtractor={item => item.id}
+        contentContainerStyle={styles.listContainer}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <MaterialCommunityIcons name="magnify-close" size={64} color={COLORS.textLight} />
+            <ThemedText style={styles.emptyStateText}>No specialists found</ThemedText>
+          </View>
+        }
+      />
+
+      {/* Filter Modal */}
+      <Modal
+        visible={isFilterModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setIsFilterModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setIsFilterModalVisible(false)}
+        >
+          <Animated.View entering={FadeInUp.duration(400)} style={styles.filterModalContent}>
+            <View style={styles.modalHeader}>
+              <ThemedText style={styles.modalTitle}>Sort & Filter</ThemedText>
+              <TouchableOpacity onPress={() => setIsFilterModalVisible(false)}>
+                <MaterialCommunityIcons name="close" size={24} color={COLORS.text} />
+              </TouchableOpacity>
             </View>
-            <MaterialCommunityIcons name="medical-bag" size={40} color={COLORS.primary} />
-          </LinearGradient>
-        </Animated.View>
 
-        {/* Filter Section */}
-        <View style={styles.filterSection}>
-          <ThemedText style={styles.filterTitle}>Sort & Filter</ThemedText>
-
-          {filters.map((filter, index) => (
-            <Animated.View
-              key={filter.name}
-              entering={FadeInDown.delay(400 + index * 50).duration(600)}
-            >
+            {filters.map((filter) => (
               <TouchableOpacity
+                key={filter.name}
                 style={[
-                  styles.filterOption,
-                  selectedFilter === filter.name && styles.filterOptionSelected
+                  styles.modalFilterOption,
+                  selectedFilter === filter.name && styles.modalFilterOptionSelected
                 ]}
                 onPress={() => {
                   Haptics.selectionAsync();
                   setSelectedFilter(filter.name);
                 }}
-                activeOpacity={0.7}
               >
-                <View style={[
-                  styles.filterIconBox,
-                  { backgroundColor: selectedFilter === filter.name ? COLORS.primaryLight : COLORS.surface }
-                ]}>
-                  <MaterialCommunityIcons
-                    name={filter.icon as any}
-                    size={20}
-                    color={selectedFilter === filter.name ? COLORS.primary : COLORS.textLight}
-                  />
-                </View>
-
+                <MaterialCommunityIcons
+                  name={filter.icon as any}
+                  size={20}
+                  color={selectedFilter === filter.name ? COLORS.primary : COLORS.textLight}
+                />
                 <ThemedText style={[
-                  styles.filterText,
-                  selectedFilter === filter.name && styles.filterTextActive
+                  styles.modalFilterText,
+                  selectedFilter === filter.name && styles.modalFilterTextSelected
                 ]}>
                   {filter.name}
                 </ThemedText>
-
-                <View
-                  style={[
-                    styles.radioButton,
-                    selectedFilter === filter.name && styles.radioButtonSelected,
-                  ]}
-                >
-                  {selectedFilter === filter.name && (
-                    <View style={styles.radioInner} />
-                  )}
-                </View>
+                {selectedFilter === filter.name && (
+                  <MaterialCommunityIcons name="check" size={20} color={COLORS.primary} />
+                )}
               </TouchableOpacity>
-            </Animated.View>
-          ))}
-        </View>
-      </ScrollView>
+            ))}
 
-      {/* Bottom Actions */}
-      <View style={styles.bottomActions}>
-        <TouchableOpacity style={styles.clearButton} onPress={() => setSelectedFilter(initialFilter)}>
-          <ThemedText style={styles.clearText}>Reset</ThemedText>
+            <TouchableOpacity
+              style={styles.applyFilterButton}
+              onPress={() => setIsFilterModalVisible(false)}
+            >
+              <ThemedText style={styles.applyFilterButtonText}>Apply Filters</ThemedText>
+            </TouchableOpacity>
+          </Animated.View>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.applyButton}
-          onPress={() => navigation.navigate('DoctorInfo')}
-        >
-          <LinearGradient
-            colors={[COLORS.primary, COLORS.accent]}
-            style={styles.applyGradient}
-          >
-            <ThemedText style={styles.applyButtonText}>Apply Filters</ThemedText>
-          </LinearGradient>
-        </TouchableOpacity>
-      </View>
+      </Modal>
     </View>
   );
 };
 
-export default DoctorFilterScreen;
+export default DoctorTabScreen;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.background,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  premiumHeader: {
     paddingTop: Platform.OS === 'ios' ? 60 : 50,
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingHorizontal: 24,
+    paddingBottom: 30,
+    borderBottomLeftRadius: 36,
+    borderBottomRightRadius: 36,
+    ...SHADOWS.large,
   },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
+  premiumHeaderTitle: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: COLORS.white,
+    marginBottom: 4,
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: COLORS.text,
+  premiumHeaderSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.8)',
+    marginBottom: 24,
   },
-  scrollContainer: {
-    flex: 1,
-  },
-  searchContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-  },
-  searchBox: {
+  searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    height: 52,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
+    gap: 12,
   },
-  searchInput: {
+  premiumSearchBox: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    height: 54,
+    ...SHADOWS.small,
+  },
+  premiumSearchInput: {
     flex: 1,
     marginLeft: 12,
     fontSize: 15,
     color: COLORS.text,
   },
-  banner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 24,
-    marginHorizontal: 20,
-    marginTop: 10,
-    borderRadius: 24,
-    ...SHADOWS.medium,
-  },
-  bannerTitle: {
-    color: COLORS.white,
-    fontSize: 18,
-    fontWeight: '800',
-    marginBottom: 4,
-  },
-  bannerSubtitle: {
-    color: '#94A3B8',
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  filterSection: {
-    padding: 20,
-    marginTop: 10,
-  },
-  filterTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    marginBottom: 20,
-    color: COLORS.text,
-  },
-  filterOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
+  filterIconButton: {
+    width: 54,
+    height: 54,
     borderRadius: 18,
-    marginBottom: 12,
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-  },
-  filterOptionSelected: {
-    borderColor: COLORS.primaryLight,
-    backgroundColor: '#FFF5F7',
-  },
-  filterIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
-  filterText: {
+  listContainer: {
+    padding: 20,
+    paddingTop: 10,
+  },
+  doctorCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
+    marginBottom: 16,
+    ...SHADOWS.small,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    overflow: 'hidden',
+  },
+  doctorContent: {
+    flexDirection: 'row',
+    padding: 16,
+  },
+  doctorImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 20,
+    backgroundColor: COLORS.surface,
+  },
+  doctorInfo: {
     flex: 1,
-    fontSize: 15,
-    color: COLORS.text,
-    fontWeight: '500',
+    marginLeft: 16,
   },
-  filterTextActive: {
+  doctorHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  doctorName: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: COLORS.text,
+    flex: 1,
+  },
+  ratingBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFBEB',
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 10,
+    gap: 4,
+  },
+  ratingText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#D97706',
+  },
+  specialtyText: {
+    fontSize: 14,
+    color: COLORS.textLight,
+    fontWeight: '500',
+    marginBottom: 12,
+  },
+  doctorStats: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 12,
+  },
+  statLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  statText: {
+    fontSize: 12,
+    color: COLORS.textLight,
+    fontWeight: '600',
+  },
+  feeText: {
+    fontSize: 13,
+    color: COLORS.primary,
+    fontWeight: '800',
+  },
+  availabilityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  availabilityText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  emptyState: {
+    alignItems: 'center',
+    marginTop: 60,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: COLORS.textLight,
+    fontWeight: '500',
+    marginTop: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  filterModalContent: {
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    padding: 24,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: COLORS.text,
+  },
+  modalFilterOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    gap: 16,
+  },
+  modalFilterOptionSelected: {
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: 12,
+    marginLeft: -12,
+    marginRight: -12,
+    borderRadius: 12,
+  },
+  modalFilterText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '500',
+    color: COLORS.text,
+  },
+  modalFilterTextSelected: {
     color: COLORS.primary,
     fontWeight: '700',
   },
-  radioButton: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: '#E2E8F0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  radioButtonSelected: {
-    borderColor: COLORS.primary,
-  },
-  radioInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+  applyFilterButton: {
     backgroundColor: COLORS.primary,
-  },
-  bottomActions: {
-    flexDirection: 'row',
-    padding: 20,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-    gap: 16,
-    backgroundColor: COLORS.white,
-    ...SHADOWS.large,
-  },
-  clearButton: {
-    flex: 1,
-    height: 56,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    justifyContent: 'center',
+    borderRadius: 18,
+    paddingVertical: 18,
     alignItems: 'center',
+    marginTop: 24,
+    ...SHADOWS.medium,
   },
-  clearText: {
-    color: COLORS.text,
-    fontWeight: '700',
-  },
-  applyButton: {
-    flex: 2,
-    height: 56,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  applyGradient: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  applyButtonText: {
+  applyFilterButtonText: {
     color: COLORS.white,
+    fontSize: 17,
     fontWeight: '800',
-    fontSize: 16,
   },
 });

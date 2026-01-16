@@ -68,11 +68,6 @@ export default function DoctorCard({ doctor, onPress }: DoctorCardProps) {
             <View style={styles.availabilityDot} />
             <ThemedText style={styles.availabilityText}>Available Today</ThemedText>
           </View>
-
-          <TouchableOpacity style={styles.bookButton}>
-            <ThemedText style={styles.bookButtonText}>Book Appointment</ThemedText>
-            <MaterialCommunityIcons name="arrow-right-circle" size={16} color={COLORS.white} />
-          </TouchableOpacity>
         </View>
       </TouchableOpacity>
     </Animated.View>
@@ -162,21 +157,5 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: COLORS.success,
     fontWeight: '600',
-  },
-  bookButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    width: '100%',
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  bookButtonText: {
-    color: COLORS.white,
-    fontSize: 11,
-    fontWeight: '700',
   },
 });

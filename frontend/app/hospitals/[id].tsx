@@ -9,12 +9,14 @@ import { ThemedText } from '../../components/themed-text';
 import { api } from '../config/api.config';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
+import { scheduleBookingNotification } from '../../utils/notifications';
 
 interface Bed {
     _id: string;
     bedNumber: string;
     isAvailable: boolean;
     hospital: string;
+    category?: string;
 }
 
 interface Ambulance {
@@ -106,6 +108,10 @@ export default function HospitalDetailsScreen() {
 
             // Show success view with haptic feedback
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+            // Trigger notification
+            await scheduleBookingNotification(bookingType === 'bed' ? 'Bed Booking' : 'Ambulance Booking', patientName);
+
             setBookingSuccess(true);
             setPatientName('');
             setContactNumber('');
@@ -143,7 +149,7 @@ export default function HospitalDetailsScreen() {
                 {/* Header Image */}
                 <View style={styles.imageContainer}>
                     <Image
-                        source={details.hospital.photo || require('@/assets/images/h3.png')}
+                        source={details.hospital.photo && details.hospital.photo.startsWith('http') ? { uri: details.hospital.photo } : require('@/assets/images/hospital1.png')}
                         style={styles.hospitalImage}
                         contentFit="cover"
                     />
@@ -195,6 +201,9 @@ export default function HospitalDetailsScreen() {
                             <View key={bed._id} style={[styles.card, !bed.isAvailable && styles.cardDisabled]}>
                                 <MaterialCommunityIcons name="bed" size={24} color={bed.isAvailable ? COLORS.primary : COLORS.textLight} />
                                 <ThemedText style={styles.cardTitle}>{bed.bedNumber}</ThemedText>
+                                <View style={styles.miniCategoryBadge}>
+                                    <ThemedText style={styles.miniCategoryText}>{bed.category || 'General'}</ThemedText>
+                                </View>
                                 {bed.isAvailable ? (
                                     <TouchableOpacity style={styles.bookButton} onPress={() => handleBookPress(bed, 'bed')}>
                                         <ThemedText style={styles.bookButtonText}>Book</ThemedText>
@@ -675,5 +684,17 @@ const styles = StyleSheet.create({
         color: '#DC2626',
         fontSize: 14,
         flex: 1
-    }
+    },
+    miniCategoryBadge: {
+        backgroundColor: COLORS.primaryLight,
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 6,
+        marginBottom: 4,
+    },
+    miniCategoryText: {
+        fontSize: 9,
+        color: COLORS.primary,
+        fontWeight: 'bold',
+    },
 });

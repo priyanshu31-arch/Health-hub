@@ -4,6 +4,7 @@ import React from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { HapticTab } from '@/components/haptic-tab';
+import { COLORS } from '../../constants/theme';
 // We don't strictly need IconSymbol anymore if we use MaterialCommunityIcons directly
 // import { IconSymbol } from '@/components/ui/icon-symbol'; 
 
@@ -23,7 +24,7 @@ export default function TabLayout() {
           height: 60, // Added slightly more height for better touch area
           paddingBottom: 8, // Adjust padding for visual balance
         },
-        tabBarActiveTintColor: '#E11D48', // Primary Rose
+        tabBarActiveTintColor: COLORS.primary, // Medical Teal/Cyan
         tabBarInactiveTintColor: '#64748B', // Slate Light
       }}
     >
@@ -72,16 +73,6 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="bookings"
-        options={{
-          title: 'Bookings',
-          tabBarIcon: ({ color }: { color: string }) => (
-            <MaterialCommunityIcons size={28} name="calendar-clock" color={color} />
-          ),
-        }}
-      />
-
-      <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
@@ -89,6 +80,20 @@ export default function TabLayout() {
             // Changed to 'account'
             <MaterialCommunityIcons size={28} name="account" color={color} />
           ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="bookings"
+        options={{
+          href: null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="explore"
+        options={{
+          href: null,
         }}
       />
     </Tabs>
